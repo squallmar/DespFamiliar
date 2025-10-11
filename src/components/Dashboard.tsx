@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from '@/contexts/LocationContext';
+import translations from '@/lib/translations';
 import { PlusCircle, TrendingUp, TrendingDown, Target, Calendar, Loader2, AlertTriangle, Trophy } from 'lucide-react';
 import { useCategories, useExpenses, useStats, useAlerts } from '@/hooks/useData';
 import { useAchievements } from '@/hooks/useAchievements';
@@ -19,6 +20,8 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { language } = useLocation();
+  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,12 +48,12 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <h3 className="text-lg font-semibold mb-4 flex items-center">
         <PlusCircle className="mr-2 text-blue-600" size={20} />
-        Adicionar Despesa Rápida
+        {t.quickAdd}
       </h3>
       <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
         <input
           type="number"
-          placeholder="Valor"
+          placeholder={t.value}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -59,7 +62,7 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
         />
         <input
           type="text"
-          placeholder="Descrição"
+          placeholder={t.description}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className="flex-2 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -71,7 +74,7 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
           className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={submitting || loading}
         >
-          <option value="">Categoria</option>
+          <option value="">{t.category}</option>
           {categories.map(cat => (
             <option key={cat.id} value={cat.id}>
               {cat.icon} {cat.name}

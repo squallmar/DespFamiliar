@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useExpenses, useCategories } from '@/hooks/useData';
+import { useLocation } from '@/contexts/LocationContext';
+import translations from '@/lib/translations';
 import { Expense } from '@/types';
 import { Edit, Trash2, Plus, Search, Filter, Loader2 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -23,6 +25,8 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
     recurring: expense?.recurring || false,
     recurringType: expense?.recurringType || 'monthly'
   });
+  const { language } = useLocation();
+  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,12 +47,11 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4">
-          {expense ? 'Editar Despesa' : 'Nova Despesa'}
+          {expense ? t.editExpense : t.newExpense}
         </h3>
-        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.value}</label>
             <input
               type="number"
               step="0.01"
@@ -59,9 +62,8 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
               required
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.description}</label>
             <input
               type="text"
               value={formData.description}
@@ -71,9 +73,8 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
               required
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.category}</label>
             <select
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
@@ -81,7 +82,7 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
               disabled={loading}
               required
             >
-              <option value="">Selecione uma categoria</option>
+              <option value="">{t.category}</option>
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>
                   {cat.icon} {cat.name}
@@ -89,7 +90,6 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
               ))}
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
             <input
@@ -101,7 +101,6 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
               required
             />
           </div>
-
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -111,9 +110,8 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
               className="mr-2"
               disabled={loading}
             />
-            <label htmlFor="recurring" className="text-sm text-gray-700">Despesa recorrente</label>
+            <label htmlFor="recurring" className="text-sm text-gray-700">{t.recurring}</label>
           </div>
-
           {formData.recurring && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de recorrência</label>
