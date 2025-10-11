@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
 import { LocationProvider } from "../contexts/LocationContext";
 import NavigationComponent from "../components/Navigation";
+import FeedbackClientWrapper from '../components/FeedbackClientWrapper';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,8 @@ export default function RootLayout({
           <AuthProvider>
             <NavigationComponent />
             {children}
+            {/* Botão global de feedback */}
+            <FeedbackClientWrapper />
           </AuthProvider>
         </LocationProvider>
       </body>

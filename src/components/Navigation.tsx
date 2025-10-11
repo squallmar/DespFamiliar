@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
 import { BarChart3, Home, Receipt, TrendingUp, LogOut, User } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,20 @@ import { useLocation } from "../contexts/LocationContext";
 import translations from "../lib/translations";
 
 export default function Navigation() {
+  const [adminOpen, setAdminOpen] = useState(false);
+  const adminRef = useRef<HTMLDivElement>(null);
+
+  // Fecha o menu ao clicar fora
+  useEffect(() => {
+    if (!adminOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (adminRef.current && !adminRef.current.contains(e.target as Node)) {
+        setAdminOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [adminOpen]);
   const { user, logout } = useAuth();
   const router = useRouter();
   const { language, currency, setLanguage, setCurrency, loading } = useLocation();
@@ -46,7 +61,7 @@ export default function Navigation() {
             <div className="hidden sm:ml-6 sm:flex sm:space-x-4 flex-1 min-w-0">
               <Link
                 href="/"
-                className="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px]"
+                className="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
                 style={{minWidth: 0}}
               >
                 <Home className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -54,7 +69,7 @@ export default function Navigation() {
               </Link>
               <Link
                 href="/expenses"
-                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px]"
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
                 style={{minWidth: 0}}
               >
                 <Receipt className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -62,7 +77,7 @@ export default function Navigation() {
               </Link>
               <Link
                 href="/projections"
-                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px]"
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
                 style={{minWidth: 0}}
               >
                 <TrendingUp className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -70,7 +85,7 @@ export default function Navigation() {
               </Link>
               <Link
                 href="/reports"
-                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px]"
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
                 style={{minWidth: 0}}
               >
                 <span className="truncate">{t.reports}</span>
@@ -107,16 +122,31 @@ export default function Navigation() {
               <User className="mr-2 h-4 w-4" />
               <span>{getFirstLast(user.name)}</span>
               {user.admin && (
-                <Link href="/admin/users" legacyBehavior>
-                  <a className="ml-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold px-4 py-1 rounded shadow uppercase text-xs tracking-widest border border-yellow-700">
+                <div className="ml-3 relative" ref={adminRef}>
+                  <button
+                    className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold px-4 py-1 rounded shadow uppercase text-xs tracking-widest border border-yellow-700 cursor-pointer focus:outline-none"
+                    onClick={() => setAdminOpen((v) => !v)}
+                    aria-haspopup="true"
+                    aria-expanded={adminOpen}
+                  >
                     ADMIN
-                  </a>
-                </Link>
+                  </button>
+                  {adminOpen && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white rounded shadow-lg border border-yellow-200 z-50">
+                      <Link href="/admin/users" legacyBehavior>
+                        <a className="block px-4 py-2 text-sm text-gray-800 hover:bg-yellow-50 cursor-pointer" onClick={() => setAdminOpen(false)}>Usuários</a>
+                      </Link>
+                      <Link href="/admin/feedbacks" legacyBehavior>
+                        <a className="block px-4 py-2 text-sm text-gray-800 hover:bg-yellow-50 cursor-pointer" onClick={() => setAdminOpen(false)}>Feedbacks</a>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center text-sm text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md hover:bg-gray-100"
+              className="flex items-center text-sm text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />
               {t.logout}

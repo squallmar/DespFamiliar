@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import translations from '@/lib/translations';
+import { useLocation } from '@/contexts/LocationContext';
 
 interface User {
   id: string;
@@ -13,6 +15,8 @@ interface User {
 
 export default function AdminUsersPage() {
   const { user } = useAuth();
+  const { language } = useLocation();
+  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,23 +42,23 @@ export default function AdminUsersPage() {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-        <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-base font-semibold">Usuários cadastrados</span>
+        <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-base font-semibold">{t.registeredUsers || 'Usuários cadastrados'}</span>
         <span className="ml-2 text-gray-400 text-sm font-normal">({users.length})</span>
       </h1>
       {loading ? (
-        <div className="flex items-center gap-2 text-gray-500"><span className="animate-spin h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full"></span>Carregando...</div>
+        <div className="flex items-center gap-2 text-gray-500"><span className="animate-spin h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full"></span>{t.loading || 'Carregando...'}</div>
       ) : error ? (
-        <div className="text-red-600 font-semibold">{error}</div>
+        <div className="text-red-600 font-semibold">{t.error || error}</div>
       ) : (
         <div className="overflow-x-auto rounded-lg shadow border border-gray-200 bg-white">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Usuário</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Email</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-700">Admin</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-700">Premium</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Criado em</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-700">{t.user || 'Usuário'}</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-700">{t.email || 'Email'}</th>
+                <th className="px-4 py-3 text-center font-semibold text-gray-700">{t.admin || 'Admin'}</th>
+                <th className="px-4 py-3 text-center font-semibold text-gray-700">{t.premium || 'Premium'}</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-700">{t.createdAt || 'Criado em'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

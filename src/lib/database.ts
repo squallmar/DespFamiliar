@@ -13,7 +13,16 @@ export async function getDatabase() {
     });
 
     // Create tables if they don't exist
-    await db.exec(`
+  await db.exec(`
+      CREATE TABLE IF NOT EXISTS feedbacks (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        email TEXT,
+        message TEXT NOT NULL,
+        page TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      );
       CREATE TABLE IF NOT EXISTS password_resets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,

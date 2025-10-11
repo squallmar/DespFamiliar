@@ -1,6 +1,13 @@
 
 const translations = {
   'pt-BR': {
+  email: 'Email',
+  admin: 'Admin',
+  premium: 'Premium',
+  createdAt: 'Criado em',
+  registeredUsers: 'Usuários cadastrados',
+  feedbacksReceived: 'Feedbacks recebidos',
+  noFeedbacksYet: 'Nenhum feedback recebido ainda.',
     dashboard: 'Dashboard',
     expenses: 'Despesas',
     projections: 'Projeções',
@@ -136,6 +143,13 @@ const translations = {
     }
   },
   'en-US': {
+  email: 'Email',
+  admin: 'Admin',
+  premium: 'Premium',
+  createdAt: 'Created at',
+  registeredUsers: 'Registered Users',
+  feedbacksReceived: 'Feedbacks received',
+  noFeedbacksYet: 'No feedbacks received yet.',
     dashboard: 'Dashboard',
     expenses: 'Expenses',
     projections: 'Projections',
@@ -271,6 +285,13 @@ const translations = {
     }
   },
   'es-ES': {
+  email: 'Correo',
+  admin: 'Admin',
+  premium: 'Premium',
+  createdAt: 'Creado en',
+  registeredUsers: 'Usuarios registrados',
+  feedbacksReceived: 'Feedbacks recibidos',
+  noFeedbacksYet: 'Aún no se ha recibido feedback.',
     dashboard: 'Panel',
     expenses: 'Gastos',
     projections: 'Proyecciones',
