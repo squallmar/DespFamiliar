@@ -215,11 +215,6 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
-      {user?.admin && (
-        <div className="absolute top-4 right-4 z-50">
-          <span className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold px-4 py-1 rounded shadow uppercase text-xs tracking-widest border border-yellow-700">ADMIN</span>
-        </div>
-      )}
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.dashboard} - {translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.appName}</h1>
         {conquistasPanel}

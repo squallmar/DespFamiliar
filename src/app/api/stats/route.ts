@@ -22,6 +22,16 @@ export async function GET(request: NextRequest) {
       AND strftime('%m', date) = ?
     `, [user.userId, currentYear.toString(), currentMonth.toString().padStart(2, '0')]);
     
+    // Total de despesas NÃO-recorrentes deste mês (para cálculo da projeção)
+    const thisMonthNonRecurring = await db.get(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM expenses 
+      WHERE user_id = ? 
+      AND strftime('%Y', date) = ? 
+      AND strftime('%m', date) = ?
+      AND (recurring != 1 OR recurring IS NULL)
+    `, [user.userId, currentYear.toString(), currentMonth.toString().padStart(2, '0')]);
+    
     // Total do mês passado
     const lastMonthTotal = await db.get(`
       SELECT COALESCE(SUM(amount), 0) as total
@@ -60,15 +70,16 @@ export async function GET(request: NextRequest) {
       LIMIT 10
     `, [user.userId]);
     
-    // Calcular percentual de mudança
+    // Calcular percentual de mudança (usando o total completo)
     const thisTotal = thisMonthTotal.total;
     const lastTotal = lastMonthTotal.total;
     const percentageChange = lastTotal > 0 ? ((thisTotal - lastTotal) / lastTotal) * 100 : 0;
     
-    // Média diária (baseada nos dias do mês atual)
+    // Média diária baseada APENAS em despesas não-recorrentes
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
     const currentDay = now.getDate();
-    const dailyAverage = thisTotal / currentDay;
+    const nonRecurringTotal = thisMonthNonRecurring.total;
+    const dailyAverage = nonRecurringTotal / currentDay;
 
     // Soma das despesas recorrentes mensais cadastradas
     const recurringRows = await db.all(`
@@ -78,7 +89,8 @@ export async function GET(request: NextRequest) {
     `, [user.userId]);
     const recurringTotal = recurringRows.reduce((sum, row) => sum + Number(row.amount), 0);
 
-    // Projeção: média diária * dias do mês + despesas recorrentes
+    // Projeção corrigida: 
+    // (média diária das não-recorrentes * dias do mês) + despesas recorrentes mensais
     const projectedMonthlyTotal = (dailyAverage * daysInMonth) + recurringTotal;
     
     const stats = {

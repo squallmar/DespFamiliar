@@ -13,6 +13,14 @@ export default function Navigation() {
   const { language, currency, setLanguage, setCurrency, loading } = useLocation();
   const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
 
+  const getFirstLast = (fullName?: string) => {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -63,6 +71,8 @@ export default function Navigation() {
               >
                 {t.reports}
               </Link>
+              {/* ADMIN badge destacado */}
+              {/* ...existing code... */}
             </div>
           </div>
           {/* Seletor de idioma/moeda */}
@@ -91,7 +101,14 @@ export default function Navigation() {
             </div>
             <div className="flex items-center text-sm text-gray-700">
               <User className="mr-2 h-4 w-4" />
-              <span>{user.name}</span>
+              <span>{getFirstLast(user.name)}</span>
+              {user.admin && (
+                <Link href="/admin/users" legacyBehavior>
+                  <a className="ml-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold px-4 py-1 rounded shadow uppercase text-xs tracking-widest border border-yellow-700">
+                    ADMIN
+                  </a>
+                </Link>
+              )}
             </div>
             <button
               onClick={handleLogout}

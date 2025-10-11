@@ -1,9 +1,10 @@
 
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useLocation } from '@/contexts/LocationContext';
+import { useTranslation } from '@/lib/translations';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import PaywallModal from '@/components/PaywallModal';
@@ -39,6 +40,7 @@ type SummaryResponse = {
 
 export default function ReportsPage() {
   const { currency, language, loading: locationLoading } = useLocation();
+  const { t } = useTranslation(language);
   const { achievements, isLoading: loadingAchievements } = useAchievements();
   let { user } = useAuth();
   // Admin é sempre premium
@@ -179,18 +181,41 @@ export default function ReportsPage() {
   };
   // Helper para formatar data
   const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString(language);
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    };
+    // Garantir que o language seja válido, senão usar en-US como fallback
+    const locale = language && language.length > 0 ? language : 'en-US';
+    return new Date(date).toLocaleDateString(locale, options);
+  };
+  
+  // Helper para obter placeholder de data baseado no idioma
+  const getDatePlaceholder = () => {
+    switch (language) {
+      case 'en-US':
+        return 'MM/DD/YYYY';
+      case 'es-ES':
+        return 'DD/MM/YYYY';
+      case 'pt-BR':
+      default:
+        return 'DD/MM/AAAA';
+    }
   };
 
-  type PieDatum = { name: string; total: number; color: string; categoryId: string };
+  // Helper para traduzir nomes de categorias
+  const translateCategory = useCallback((categoryName: string) => {
+    return t(`categories.${categoryName}`, categoryName);
+  }, [t]);  type PieDatum = { name: string; total: number; color: string; categoryId: string };
   type SeriesDatum = { [key: string]: number | string };
 
   const pieData = useMemo<PieDatum[]>(() => {
     if (!data) return [];
     return data.totalsByCategory
       .filter((c) => Number(c.total) > 0)
-      .map((c) => ({ name: c.name, total: Number(c.total), color: c.color, categoryId: c.categoryId }));
-  }, [data]);
+      .map((c) => ({ name: translateCategory(c.name), total: Number(c.total), color: c.color, categoryId: c.categoryId }));
+  }, [data, translateCategory]);
 
   const pieDataForChart = useMemo<SeriesDatum[]>(() => pieData as unknown as SeriesDatum[], [pieData]);
 
@@ -263,7 +288,7 @@ export default function ReportsPage() {
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Carregando localização...</span>
+          <span>{t('loadingLocation')}</span>
         </div>
       </div>
     );
@@ -272,50 +297,50 @@ export default function ReportsPage() {
     <ProtectedRoute>
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Relatórios</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('reportsTitle')}</h1>
 
           <div className="bg-white rounded-lg shadow p-4 mb-6">
             {/* Painel de Resumo */}
             <div className="mb-6">
-              <h2 className="text-xl font-bold mb-2 flex items-center gap-2">Resumo do Período
+              <h2 className="text-xl font-bold mb-2 flex items-center gap-2">{t('summaryPeriod')}
                 <select
                   className="ml-2 border rounded px-2 py-1 text-base"
                   value={summaryPeriod}
                   onChange={e => setSummaryPeriod(e.target.value as 'week' | 'month')}
                   disabled={summaryLoading}
                 >
-                  <option value="week">Semana</option>
-                  <option value="month">Mês</option>
+                  <option value="week">{t('week')}</option>
+                  <option value="month">{t('month')}</option>
                 </select>
               </h2>
-              {summaryLoading && <div className="text-gray-600 flex items-center"><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Carregando resumo...</div>}
+              {summaryLoading && <div className="text-gray-600 flex items-center"><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('loadingSummary')}</div>}
               {summaryError && <div className="text-red-600">{summaryError}</div>}
               {summary && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-indigo-50 rounded p-4 flex flex-col items-center">
                     <div className="text-2xl font-bold text-indigo-700">{formatCurrency(Number(summary.total))}</div>
-                    <div className="text-sm text-gray-700">Total de despesas</div>
-                    <div className="text-xs text-gray-500 mt-1">{formatDate(summary.from)} a {formatDate(summary.to)}</div>
+                    <div className="text-sm text-gray-700">{t('totalExpenses')}</div>
+                    <div className="text-xs text-gray-500 mt-1">{formatDate(summary.from)} {t('dateTo')} {formatDate(summary.to)}</div>
                   </div>
                   <div className="bg-green-50 rounded p-4">
-                    <div className="font-semibold text-green-700 mb-1">Top Categorias</div>
+                    <div className="font-semibold text-green-700 mb-1">{t('topCategories')}</div>
                     <ul className="text-sm text-gray-700 space-y-1">
-                      {summary.topCategories.length === 0 && <li>Nenhuma categoria</li>}
+                      {summary.topCategories.length === 0 && <li>{t('noCategories')}</li>}
                       {summary.topCategories.map((cat) => (
                         <li key={cat.name} className="flex items-center gap-2">
-                          <span>{cat.icon}</span> <span>{cat.name}</span> <span className="ml-auto font-bold">{formatCurrency(Number(cat.total))}</span>
+                          <span>{cat.icon}</span> <span>{translateCategory(cat.name)}</span> <span className="ml-auto font-bold">{formatCurrency(Number(cat.total))}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div className="bg-yellow-50 rounded p-4">
-                    <div className="font-semibold text-yellow-700 mb-1">Alertas</div>
+                    <div className="font-semibold text-yellow-700 mb-1">{t('alertsSection')}</div>
                     <ul className="text-sm text-gray-700 space-y-1">
-                      {summary.alerts.length === 0 && <li>Nenhum alerta</li>}
+                      {summary.alerts.length === 0 && <li>{t('noAlerts')}</li>}
                       {summary.alerts.map((alert, i) => (
                         <li key={i} className="flex items-center gap-2">
                           {alert.type === 'budget' && <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: alert.color }}></span>}
-                          <span>{alert.type === 'budget' ? `${alert.categoryName}: ${Math.round(alert.usage*100)}% do orçamento (${formatCurrency(alert.spent)} / ${formatCurrency(alert.budget)})` : alert.message}</span>
+                          <span>{alert.type === 'budget' ? `${alert.categoryName}: ${Math.round(alert.usage*100)}% ${t('budgetUsage')} (${formatCurrency(alert.spent)} / ${formatCurrency(alert.budget)})` : alert.message}</span>
                         </li>
                       ))}
                     </ul>
@@ -325,14 +350,14 @@ export default function ReportsPage() {
               {/* Conquistas exclusivas premium */}
               {user?.premium && (
                 <div className="mt-6 bg-white rounded-lg shadow p-4">
-                  <h2 className="text-lg font-bold mb-2 text-indigo-700">Conquistas Exclusivas</h2>
+                  <h2 className="text-lg font-bold mb-2 text-indigo-700">{t('exclusiveAchievements')}</h2>
                   {loadingAchievements ? (
-                    <div className="text-gray-600 flex items-center"><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Carregando conquistas...</div>
+                    <div className="text-gray-600 flex items-center"><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('loadingAchievements')}</div>
                   ) : achievements.length === 0 ? (
-                    <div className="text-gray-500">Nenhuma conquista ainda.</div>
+                    <div className="text-gray-500">{t('noAchievementsYet')}</div>
                   ) : (
                     <ul className="space-y-2">
-                      {achievements.map((ach: any) => (
+                      {achievements.map((ach: { id: string; description: string; awarded_at: string }) => (
                         <li key={ach.id} className="flex items-center gap-2">
                           <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
                           <span className="font-semibold">{ach.description}</span>
@@ -347,22 +372,34 @@ export default function ReportsPage() {
                 {/* Fim do Painel de Resumo */}
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">De</label>
+                <label className="block text-sm text-gray-600 mb-1">
+                  {t('from')}
+                  <span className="text-xs text-gray-400 ml-1">({getDatePlaceholder()})</span>
+                </label>
                 <input
                   type="date"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
                   className="border rounded px-3 py-2"
                 />
+                <div className="text-xs text-gray-400 mt-1">
+                  {t('dateFormatNote')}
+                </div>
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Até</label>
+                <label className="block text-sm text-gray-600 mb-1">
+                  {t('to')}
+                  <span className="text-xs text-gray-400 ml-1">({getDatePlaceholder()})</span>
+                </label>
                 <input
                   type="date"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
                   className="border rounded px-3 py-2"
                 />
+                <div className="text-xs text-gray-400 mt-1">
+                  {t('dateFormatNote')}
+                </div>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <label className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-800 disabled:opacity-50 flex items-center cursor-pointer" style={{ cursor: 'pointer' }}>
@@ -373,7 +410,7 @@ export default function ReportsPage() {
                     className="hidden"
                     disabled={downloading}
                   />
-                  Importar Extrato Bancário (CSV)
+                  {t('importBankStatement')}
                 </label>
                 <button
                   onClick={handleBackup}
@@ -381,7 +418,7 @@ export default function ReportsPage() {
                   className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-900 disabled:opacity-50 flex items-center cursor-pointer"
                   style={{ cursor: 'pointer' }}
                 >
-                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Exportando...</>) : 'Backup (JSON)'}
+                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('exporting')}</>) : t('backupJSON')}
                 </button>
                 <label className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700 disabled:opacity-50 flex items-center cursor-pointer" style={{ cursor: 'pointer' }}>
                   <input
@@ -391,7 +428,7 @@ export default function ReportsPage() {
                     className="hidden"
                     disabled={downloading}
                   />
-                  Restaurar Backup
+                  {t('restoreBackup')}
                 </label>
                 <button
                   onClick={() => handleDownload('csv')}
@@ -399,7 +436,7 @@ export default function ReportsPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center cursor-pointer"
                   style={{ cursor: 'pointer' }}
                 >
-                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Exportando...</>) : 'Exportar CSV'}
+                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('exporting')}</>) : t('exportCSV')}
                 </button>
                 <button
                   onClick={() => handleDownload('excel')}
@@ -407,7 +444,7 @@ export default function ReportsPage() {
                   className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 flex items-center cursor-pointer"
                   style={{ cursor: 'pointer' }}
                 >
-                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Exportando...</>) : 'Exportar Excel'}
+                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('exporting')}</>) : t('exportExcel')}
                 </button>
                 <button
                   onClick={() => handleDownload('pdf')}
@@ -415,7 +452,7 @@ export default function ReportsPage() {
                   className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 flex items-center cursor-pointer"
                   style={{ cursor: 'pointer' }}
                 >
-                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Exportando...</>) : 'Exportar PDF'}
+                  {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('exporting')}</>) : t('exportPDFButton')}
                 </button>
                 {/* Botão Pix premium */}
                 <button
@@ -423,7 +460,7 @@ export default function ReportsPage() {
                   className="px-4 py-2 bg-yellow-400 text-gray-900 rounded hover:bg-yellow-500 flex items-center cursor-pointer"
                   style={{ cursor: 'pointer' }}
                 >
-                  Assinar via Pix (R$20)
+                  {t('subscribePixButton')}
                 </button>
               </div>
             </div>
@@ -431,7 +468,7 @@ export default function ReportsPage() {
 
           <div className="bg-white rounded-lg shadow p-4">
             {loading && (
-              <div className="flex items-center text-gray-600"><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Carregando gráficos...</div>
+              <div className="flex items-center text-gray-600"><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('loadingCharts')}</div>
             )}
             {error && (
               <div className="text-red-600">{error}</div>
@@ -439,19 +476,19 @@ export default function ReportsPage() {
             {data && (
               <div className="space-y-10">
                 <div>
-                  <h3 className="font-semibold mb-3">Despesas por Categoria</h3>
+                  <h3 className="font-semibold mb-3">{t('expensesByCategory')}</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
+                        <PieChart margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
                           <Pie
                             data={pieDataForChart}
                             dataKey="total"
                             nameKey="name"
                             cx="50%"
                             cy="50%"
-                            outerRadius={100}
-                            label={({ name, value }) => `${name}: ${formatCurrency(Number(value))}`}
+                            outerRadius={90}
+                            labelLine
                           >
                             {pieData.map((entry) => (
                               <Cell key={entry.categoryId} fill={entry.color} />
@@ -465,7 +502,7 @@ export default function ReportsPage() {
                     <ul className="text-sm text-gray-700 space-y-1">
                       {data.totalsByCategory.map((c) => (
                         <li key={c.categoryId} className="flex justify-between">
-                          <span className="flex items-center gap-2"><span style={{ backgroundColor: c.color }} className="inline-block w-3 h-3 rounded" />{c.icon} {c.name}</span>
+                          <span className="flex items-center gap-2"><span style={{ backgroundColor: c.color }} className="inline-block w-3 h-3 rounded" />{c.icon} {translateCategory(c.name)}</span>
                           <span>{formatCurrency(Number(c.total))}</span>
                         </li>
                       ))}
@@ -474,14 +511,14 @@ export default function ReportsPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3">Evolução Diária</h3>
+                  <h3 className="font-semibold mb-3">{t('dailyEvolution')}</h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={dailyDataForChart} margin={{ left: 8, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" tickFormatter={(d: string) => new Date(d).toLocaleDateString('pt-BR')} minTickGap={24} />
+                        <XAxis dataKey="day" tickFormatter={(d: string) => new Date(d).toLocaleDateString(language || 'en-US')} minTickGap={24} />
                         <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={80} />
-                        <Tooltip labelFormatter={(d) => new Date(String(d)).toLocaleDateString(language)} formatter={(v: number) => formatCurrency(Number(v))} />
+                        <Tooltip labelFormatter={(d) => new Date(String(d)).toLocaleDateString(language || 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })} formatter={(v: number) => formatCurrency(Number(v))} />
                         <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -489,7 +526,7 @@ export default function ReportsPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3">Totais Mensais</h3>
+                  <h3 className="font-semibold mb-3">{t('monthlyTotals')}</h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={monthlyDataForChart} margin={{ left: 8, right: 16 }}>
