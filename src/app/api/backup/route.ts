@@ -3,10 +3,15 @@ import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 
 // GET: Exporta todos os dados do usuário como JSON
+
 export async function GET(request: NextRequest) {
   try {
     const user = requireAuth(request);
     const db = await getDatabase();
+    const userDb = await db.get('SELECT premium FROM users WHERE id = ?', [user.userId]);
+    if (!userDb?.premium) {
+      return NextResponse.json({ error: 'Recurso disponível apenas para usuários premium.' }, { status: 403 });
+    }
     const [categories, expenses, budgets, goals, achievements] = await Promise.all([
       db.all('SELECT * FROM categories WHERE user_id = ?', [user.userId]),
       db.all('SELECT * FROM expenses WHERE user_id = ?', [user.userId]),
@@ -25,10 +30,15 @@ export async function GET(request: NextRequest) {
 }
 
 // POST: Importa dados do usuário a partir de JSON
+
 export async function POST(request: NextRequest) {
   try {
     const user = requireAuth(request);
     const db = await getDatabase();
+    const userDb = await db.get('SELECT premium FROM users WHERE id = ?', [user.userId]);
+    if (!userDb?.premium) {
+      return NextResponse.json({ error: 'Recurso disponível apenas para usuários premium.' }, { status: 403 });
+    }
     const data = await request.json();
     // Remove todos os dados antigos do usuário
     await db.run('DELETE FROM categories WHERE user_id = ?', [user.userId]);

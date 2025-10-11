@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { PlusCircle, TrendingUp, TrendingDown, Target, Calendar, Loader2, AlertTriangle, Trophy } from 'lucide-react';
 import { useCategories, useExpenses, useStats, useAlerts } from '@/hooks/useData';
 import { useAchievements } from '@/hooks/useAchievements';
@@ -126,7 +128,9 @@ function StatsCard({ title, value, icon: Icon, trend, color }: {
 }
 
 export default function Dashboard() {
+  const { currency, language, loading: locationLoading } = useLocation();
   const { categories, loading: categoriesLoading } = useCategories();
+  const { user } = useAuth();
   const { createExpense } = useExpenses();
   const { stats, loading: statsLoading, refetch: refetchStats } = useStats();
   const { alerts, loading: alertsLoading } = useAlerts();
@@ -147,7 +151,7 @@ export default function Dashboard() {
     }
   };
 
-  if (statsLoading || categoriesLoading) {
+  if (statsLoading || categoriesLoading || locationLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
@@ -157,28 +161,31 @@ export default function Dashboard() {
       </div>
     );
   }
-      {/* Painel de Conquistas */}
-      <div className="bg-white rounded-lg shadow p-4 mb-8 mt-6 max-w-2xl">
-        <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-500" /> Conquistas
-        </h2>
-        <p className="text-gray-600 text-sm mb-2">Ganhe conquistas ao usar o app!</p>
-        {loadingAchievements ? (
-          <div className="text-gray-500">Carregando conquistas...</div>
-        ) : achievements.length === 0 ? (
-          <div className="text-gray-500">Nenhuma conquista ainda.</div>
-        ) : (
-          <ul className="space-y-2">
-            {achievements.map((ach: any) => (
-              <li key={ach.id} className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-yellow-400" />
-                <span className="font-medium">{ach.description}</span>
-                <span className="text-xs text-gray-400 ml-auto">{new Date(ach.awarded_at).toLocaleDateString('pt-BR')}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+
+  // Painel de Conquistas
+  const conquistasPanel = (
+    <div className="bg-white rounded-lg shadow p-4 mb-8 mt-6 max-w-2xl">
+      <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <Trophy className="w-5 h-5 text-yellow-500" /> Conquistas
+      </h2>
+      <p className="text-gray-600 text-sm mb-2">Ganhe conquistas ao usar o app!</p>
+      {loadingAchievements ? (
+        <div className="text-gray-500">Carregando conquistas...</div>
+      ) : achievements.length === 0 ? (
+        <div className="text-gray-500">Nenhuma conquista ainda.</div>
+      ) : (
+        <ul className="space-y-2">
+          {achievements.map((ach: any) => (
+            <li key={ach.id} className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span className="font-medium">{ach.description}</span>
+              <span className="text-xs text-gray-400 ml-auto">{new Date(ach.awarded_at).toLocaleDateString('pt-BR')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 
   if (!stats) {
     return (
@@ -190,11 +197,25 @@ export default function Dashboard() {
     );
   }
 
+  // Helper para formatar moeda
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
+  };
+  // Helper para formatar data
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString(language);
+  };
+
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen relative">
+      {user?.admin && (
+        <div className="absolute top-4 right-4 z-50">
+          <span className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold px-4 py-1 rounded shadow uppercase text-xs tracking-widest border border-yellow-700">ADMIN</span>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard - Controle Familiar</h1>
-
+        {conquistasPanel}
         {/* Painel de Alertas */}
         <div className="mb-6">
           {!alertsLoading && alerts.length > 0 && (
@@ -227,37 +248,34 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-        
-  <QuickAddExpense onAddExpense={handleAddExpense} categories={categories} loading={categoriesLoading} />
-
+        <QuickAddExpense onAddExpense={handleAddExpense} categories={categories} loading={categoriesLoading} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
             title="Gastos Este Mês"
-            value={`R$ ${stats.totalThisMonth.toFixed(2)}`}
+            value={formatCurrency(stats.totalThisMonth)}
             icon={TrendingUp}
             trend={stats.percentageChange}
             color="bg-blue-500"
           />
           <StatsCard
             title="Gastos Mês Anterior"
-            value={`R$ ${stats.totalLastMonth.toFixed(2)}`}
+            value={formatCurrency(stats.totalLastMonth)}
             icon={Calendar}
             color="bg-gray-500"
           />
           <StatsCard
             title="Média Diária"
-            value={`R$ ${stats.dailyAverage.toFixed(2)}`}
+            value={formatCurrency(stats.dailyAverage)}
             icon={Target}
             color="bg-green-500"
           />
           <StatsCard
             title="Projeção Mensal"
-            value={`R$ ${stats.projectedMonthlyTotal.toFixed(2)}`}
+            value={formatCurrency(stats.projectedMonthlyTotal)}
             icon={TrendingUp}
             color="bg-purple-500"
           />
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold mb-4">Despesas por Categoria (Este Mês)</h3>
@@ -269,7 +287,7 @@ export default function Dashboard() {
                     <span className="font-medium">{category.name}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-600">R$ {category.amount.toFixed(2)}</div>
+                    <div className="text-sm text-gray-600">{formatCurrency(category.amount)}</div>
                     <div className="w-24 bg-gray-200 rounded-full h-2">
                       <div 
                         className="h-2 rounded-full" 
@@ -287,7 +305,6 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold mb-4">Últimas Despesas</h3>
             <div className="space-y-4">
@@ -302,10 +319,10 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <span className="font-semibold text-red-600">
-                      R$ {expense.amount.toFixed(2)}
+                      {formatCurrency(expense.amount)}
                     </span>
                     <div className="text-xs text-gray-500">
-                      {new Date(expense.date).toLocaleDateString('pt-BR')}
+                      {formatDate(expense.date)}
                     </div>
                   </div>
                 </div>

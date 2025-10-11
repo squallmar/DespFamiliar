@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     );
 
     const response = NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email, premium: !!(user.premium || user.admin), admin: !!user.admin },
       message: 'Login realizado com sucesso'
     });
 

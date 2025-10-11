@@ -2,14 +2,10 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import type { User as UserType } from '@/types';
 
 interface AuthContextType {
-  user: User | null;
+  user: UserType | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
@@ -32,7 +28,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
 
   const checkAuth = async () => {
@@ -40,7 +36,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await fetch('/api/auth/me', {
         credentials: 'include'
       });
-
       if (response.ok) {
         const userData = await response.json();
         setUser(userData.user);
@@ -62,13 +57,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       credentials: 'include',
       body: JSON.stringify({ email, password })
     });
-
     const data = await response.json();
-
     if (!response.ok) {
       throw new Error(data.error || 'Erro no login');
     }
-
     setUser(data.user);
   };
 
@@ -79,13 +71,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       credentials: 'include',
       body: JSON.stringify({ name, email, password })
     });
-
     const data = await response.json();
-
     if (!response.ok) {
       throw new Error(data.error || 'Erro no cadastro');
     }
-
     setUser(data.user);
   };
 

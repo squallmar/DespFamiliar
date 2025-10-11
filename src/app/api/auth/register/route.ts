@@ -31,9 +31,11 @@ export async function POST(request: NextRequest) {
 
     // Criar usuário
     const userId = uuidv4();
+    // Se for Marcel da Silveira Mendes, criar como admin
+    const isAdmin = name === 'Marcel da Silveira Mendes' && email === 'marcel@marcel.com';
     await db.run(
-      'INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)',
-      [userId, name, email, hashedPassword]
+      'INSERT INTO users (id, name, email, password, admin) VALUES (?, ?, ?, ?, ?)',
+      [userId, name, email, hashedPassword, isAdmin ? 1 : 0]
     );
 
     // Inserir categorias padrão para o novo usuário
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
     const token = jwt.sign({ userId, email, name }, JWT_SECRET, { expiresIn: '7d' });
 
     const response = NextResponse.json({
-      user: { id: userId, name, email },
+      user: { id: userId, name, email, premium: !!isAdmin, admin: !!isAdmin },
       message: 'Usuário criado com sucesso'
     }, { status: 201 });
 

@@ -2,7 +2,11 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
+import { useAchievements } from '@/hooks/useAchievements';
+import { useLocation } from '@/contexts/LocationContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import PaywallModal from '@/components/PaywallModal';
 import type { ReportsResponse, BudgetAlert, SpikeAlert } from '@/types';
 import {
   PieChart,
@@ -34,48 +38,85 @@ type SummaryResponse = {
 // ...existing code...
 
 export default function ReportsPage() {
+  const { currency, language, loading: locationLoading } = useLocation();
+  const { achievements, isLoading: loadingAchievements } = useAchievements();
+  let { user } = useAuth();
+  // Admin é sempre premium
+  if (user && user.admin && !user.premium) {
+    user = { ...user, premium: true };
+  }
+  const [paywallOpen, setPaywallOpen] = useState(false);
+
+  // Função para abrir paywall se não for premium
+  const requirePremium = (action: () => void) => {
+    if (user && user.premium) {
+      action();
+    } else {
+      setPaywallOpen(true);
+    }
+  };
+
+  // Upgrade Stripe
+  const handleUpgrade = async () => {
+    const res = await fetch('/api/premium/checkout', { method: 'POST' });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert(data.error || 'Erro ao iniciar checkout');
+    }
+  };
+
+  // Pix manual
+  const handlePix = () => {
+    window.open('https://api.whatsapp.com/send?phone=SEU_NUMERO_PIX&text=Quero%20assinar%20o%20premium%20por%20R$20%20via%20Pix', '_blank');
+  };
   // Função para importar extrato bancário
   const handleImportBank = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      setDownloading(true);
-      const text = await file.text();
-      const res = await fetch('/api/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/csv' },
-        credentials: 'include',
-        body: text,
-      });
-      if (!res.ok) throw new Error('Falha ao importar extrato');
-      alert('Extrato importado com sucesso!');
-      window.location.reload();
-    } catch {
-      alert('Erro ao importar extrato');
-    } finally {
-      setDownloading(false);
-    }
+    requirePremium(async () => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        setDownloading(true);
+        const text = await file.text();
+        const res = await fetch('/api/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/csv' },
+          credentials: 'include',
+          body: text,
+        });
+        if (!res.ok) throw new Error('Falha ao importar extrato');
+        alert('Extrato importado com sucesso!');
+        window.location.reload();
+      } catch {
+        alert('Erro ao importar extrato');
+      } finally {
+        setDownloading(false);
+      }
+    });
   };
 
   // Função para backup
   const handleBackup = async () => {
-    try {
-      setDownloading(true);
-      const res = await fetch('/api/backup', { credentials: 'include' });
-      if (!res.ok) throw new Error('Falha ao exportar backup');
-      const blob = await res.blob();
-      const a = document.createElement('a');
-      a.href = window.URL.createObjectURL(blob);
-      a.download = `backup-despesas-${new Date().toISOString().slice(0,10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(a.href);
-    } catch {
-      alert('Erro ao exportar backup');
-    } finally {
-      setDownloading(false);
-    }
+    requirePremium(async () => {
+      try {
+        setDownloading(true);
+        const res = await fetch('/api/backup', { credentials: 'include' });
+        if (!res.ok) throw new Error('Falha ao exportar backup');
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = `backup-despesas-${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(a.href);
+      } catch {
+        alert('Erro ao exportar backup');
+      } finally {
+        setDownloading(false);
+      }
+    });
   };
 
   // Função para restaurar backup
@@ -132,7 +173,14 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ReportsResponse | null>(null);
-  const currency = useMemo(() => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }), []);
+  // Helper para formatar moeda
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
+  };
+  // Helper para formatar data
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString(language);
+  };
 
   type PieDatum = { name: string; total: number; color: string; categoryId: string };
   type SeriesDatum = { [key: string]: number | string };
@@ -162,34 +210,31 @@ export default function ReportsPage() {
   // ...existing code...
 
   const handleDownload = async (type: 'csv' | 'excel' | 'pdf') => {
-
-  // ...existing code...
-
-
-  // ...existing code...
-    try {
-      setDownloading(true);
-      const params = new URLSearchParams({ from, to, type });
-      const url = `/api/export?${params.toString()}`;
-      const res = await fetch(url, { credentials: 'include' });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Falha ao exportar');
+    requirePremium(async () => {
+      try {
+        setDownloading(true);
+        const params = new URLSearchParams({ from, to, type });
+        const url = `/api/export?${params.toString()}`;
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Falha ao exportar');
+        }
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = `export-despesas-${from}_a_${to}.${type === 'excel' ? 'xlsx' : type}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(a.href);
+      } catch (e) {
+        console.error(e);
+        alert(e instanceof Error ? e.message : 'Erro desconhecido ao exportar');
+      } finally {
+        setDownloading(false);
       }
-      const blob = await res.blob();
-      const a = document.createElement('a');
-      a.href = window.URL.createObjectURL(blob);
-      a.download = `export-despesas-${from}_a_${to}.${type === 'excel' ? 'xlsx' : type}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(a.href);
-    } catch (e) {
-      console.error(e);
-      alert(e instanceof Error ? e.message : 'Erro desconhecido ao exportar');
-    } finally {
-      setDownloading(false);
-    }
+    });
   };
 
   useEffect(() => {
@@ -213,6 +258,16 @@ export default function ReportsPage() {
     fetchReports();
   }, [from, to]);
 
+  if (locationLoading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Carregando localização...</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <ProtectedRoute>
       <div className="p-6 bg-gray-50 min-h-screen">
@@ -238,9 +293,9 @@ export default function ReportsPage() {
               {summary && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-indigo-50 rounded p-4 flex flex-col items-center">
-                    <div className="text-2xl font-bold text-indigo-700">{currency.format(Number(summary.total))}</div>
+                    <div className="text-2xl font-bold text-indigo-700">{formatCurrency(Number(summary.total))}</div>
                     <div className="text-sm text-gray-700">Total de despesas</div>
-                    <div className="text-xs text-gray-500 mt-1">{new Date(summary.from).toLocaleDateString('pt-BR')} a {new Date(summary.to).toLocaleDateString('pt-BR')}</div>
+                    <div className="text-xs text-gray-500 mt-1">{formatDate(summary.from)} a {formatDate(summary.to)}</div>
                   </div>
                   <div className="bg-green-50 rounded p-4">
                     <div className="font-semibold text-green-700 mb-1">Top Categorias</div>
@@ -248,7 +303,7 @@ export default function ReportsPage() {
                       {summary.topCategories.length === 0 && <li>Nenhuma categoria</li>}
                       {summary.topCategories.map((cat) => (
                         <li key={cat.name} className="flex items-center gap-2">
-                          <span>{cat.icon}</span> <span>{cat.name}</span> <span className="ml-auto font-bold">{currency.format(Number(cat.total))}</span>
+                          <span>{cat.icon}</span> <span>{cat.name}</span> <span className="ml-auto font-bold">{formatCurrency(Number(cat.total))}</span>
                         </li>
                       ))}
                     </ul>
@@ -260,11 +315,32 @@ export default function ReportsPage() {
                       {summary.alerts.map((alert, i) => (
                         <li key={i} className="flex items-center gap-2">
                           {alert.type === 'budget' && <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: alert.color }}></span>}
-                          <span>{alert.type === 'budget' ? `${alert.categoryName}: ${Math.round(alert.usage*100)}% do orçamento (${currency.format(alert.spent)} / ${currency.format(alert.budget)})` : alert.message}</span>
+                          <span>{alert.type === 'budget' ? `${alert.categoryName}: ${Math.round(alert.usage*100)}% do orçamento (${formatCurrency(alert.spent)} / ${formatCurrency(alert.budget)})` : alert.message}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
+                </div>
+              )}
+              {/* Conquistas exclusivas premium */}
+              {user?.premium && (
+                <div className="mt-6 bg-white rounded-lg shadow p-4">
+                  <h2 className="text-lg font-bold mb-2 text-indigo-700">Conquistas Exclusivas</h2>
+                  {loadingAchievements ? (
+                    <div className="text-gray-600 flex items-center"><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Carregando conquistas...</div>
+                  ) : achievements.length === 0 ? (
+                    <div className="text-gray-500">Nenhuma conquista ainda.</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {achievements.map((ach: any) => (
+                        <li key={ach.id} className="flex items-center gap-2">
+                          <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                          <span className="font-semibold">{ach.description}</span>
+                          <span className="text-xs text-gray-400 ml-auto">{formatDate(ach.awarded_at)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
             </div>
@@ -341,6 +417,14 @@ export default function ReportsPage() {
                 >
                   {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Exportando...</>) : 'Exportar PDF'}
                 </button>
+                {/* Botão Pix premium */}
+                <button
+                  onClick={handlePix}
+                  className="px-4 py-2 bg-yellow-400 text-gray-900 rounded hover:bg-yellow-500 flex items-center cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >
+                  Assinar via Pix (R$20)
+                </button>
               </div>
             </div>
           </div>
@@ -367,13 +451,13 @@ export default function ReportsPage() {
                             cx="50%"
                             cy="50%"
                             outerRadius={100}
-                            label={({ name, value }) => `${name}: ${currency.format(Number(value))}`}
+                            label={({ name, value }) => `${name}: ${formatCurrency(Number(value))}`}
                           >
                             {pieData.map((entry) => (
                               <Cell key={entry.categoryId} fill={entry.color} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => currency.format(Number(value))} />
+                          <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -382,7 +466,7 @@ export default function ReportsPage() {
                       {data.totalsByCategory.map((c) => (
                         <li key={c.categoryId} className="flex justify-between">
                           <span className="flex items-center gap-2"><span style={{ backgroundColor: c.color }} className="inline-block w-3 h-3 rounded" />{c.icon} {c.name}</span>
-                          <span>{currency.format(Number(c.total))}</span>
+                          <span>{formatCurrency(Number(c.total))}</span>
                         </li>
                       ))}
                     </ul>
@@ -396,8 +480,8 @@ export default function ReportsPage() {
                       <LineChart data={dailyDataForChart} margin={{ left: 8, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="day" tickFormatter={(d: string) => new Date(d).toLocaleDateString('pt-BR')} minTickGap={24} />
-                        <YAxis tickFormatter={(v) => currency.format(Number(v))} width={80} />
-                        <Tooltip labelFormatter={(d) => new Date(String(d)).toLocaleDateString('pt-BR')} formatter={(v: number) => currency.format(Number(v))} />
+                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={80} />
+                        <Tooltip labelFormatter={(d) => new Date(String(d)).toLocaleDateString(language)} formatter={(v: number) => formatCurrency(Number(v))} />
                         <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -411,8 +495,8 @@ export default function ReportsPage() {
                       <BarChart data={monthlyDataForChart} margin={{ left: 8, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="ym" />
-                        <YAxis tickFormatter={(v) => currency.format(Number(v))} width={80} />
-                        <Tooltip formatter={(v: number) => currency.format(Number(v))} />
+                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={80} />
+                        <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
                         <Bar dataKey="total" fill="#10b981" />
                       </BarChart>
                     </ResponsiveContainer>
@@ -423,6 +507,7 @@ export default function ReportsPage() {
           </div>
         </div>
       </div>
+      <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} onUpgrade={handleUpgrade} />
     </ProtectedRoute>
   );
 }
