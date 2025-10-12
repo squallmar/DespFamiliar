@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
     }
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
     const db = await getDatabase();
-    const userDb = await db.get('SELECT premium, admin FROM users WHERE id = ?', [decoded.userId]);
+  const userResult = await db.query('SELECT premium, admin FROM users WHERE id = $1', [decoded.userId]);
+  const userDb = userResult.rows[0];
     return NextResponse.json({
       user: {
         id: decoded.userId,

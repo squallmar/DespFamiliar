@@ -8,14 +8,16 @@ export async function GET(request: NextRequest) {
     const user = requireAuth(request);
     const db = await getDatabase();
     
-    const expenses = await db.all(`
-      SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+    const expensesResult = await db.query(
+      `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
       FROM expenses e
       LEFT JOIN categories c ON e.category_id = c.id
-      WHERE e.user_id = ?
+      WHERE e.user_id = $1
       ORDER BY e.date DESC
-      LIMIT 50
-    `, [user.userId]);
+      LIMIT 50`,
+      [user.userId]
+    );
+    const expenses = expensesResult.rows;
 
     return NextResponse.json({ expenses });
   } catch (error) {
@@ -42,30 +44,35 @@ export async function POST(request: NextRequest) {
     const expenseDate = date || new Date().toISOString();
 
 
-    await db.run(`
-      INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [expenseId, amount, description, categoryId, expenseDate, user.userId, recurring, recurringType]);
+    await db.query(
+      `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [expenseId, amount, description, categoryId, expenseDate, user.userId, recurring, recurringType]
+    );
 
     // Premiar conquista "primeira despesa" se for a primeira do usuário
-    const count = await db.get('SELECT COUNT(*) as total FROM expenses WHERE user_id = ?', [user.userId]);
+  const countResult = await db.query('SELECT COUNT(*) as total FROM expenses WHERE user_id = $1', [user.userId]);
+  const count = countResult.rows[0];
     if (count.total === 1) {
       // Só premia se ainda não existe
-      const ach = await db.get('SELECT id FROM achievements WHERE user_id = ? AND type = ?', [user.userId, 'first_expense']);
+    const achResult = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'first_expense']);
+    const ach = achResult.rows[0];
       if (!ach) {
-        await db.run(
-          'INSERT INTO achievements (id, user_id, type, description) VALUES (?, ?, ?, ?)',
+        await db.query(
+          'INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
           [uuidv4(), user.userId, 'first_expense', 'Primeira despesa cadastrada!']
         );
       }
     }
 
-    const expense = await db.get(`
-      SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+    const expenseResult = await db.query(
+      `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
       FROM expenses e
       LEFT JOIN categories c ON e.category_id = c.id
-      WHERE e.id = ?
-    `, [expenseId]);
+      WHERE e.id = $1`,
+      [expenseId]
+    );
+    const expense = expenseResult.rows[0];
 
     return NextResponse.json({ expense }, { status: 201 });
   } catch (error) {
@@ -89,23 +96,27 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verificar se a despesa pertence ao usuário
-    const existingExpense = await db.get('SELECT user_id FROM expenses WHERE id = ?', [id]);
+  const existingExpenseResult = await db.query('SELECT user_id FROM expenses WHERE id = $1', [id]);
+  const existingExpense = existingExpenseResult.rows[0];
     if (!existingExpense || existingExpense.user_id !== user.userId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
 
-    await db.run(`
-      UPDATE expenses 
-      SET amount = ?, description = ?, category_id = ?, date = ?, recurring = ?, recurring_type = ?
-      WHERE id = ?
-    `, [amount, description, categoryId, date, recurring, recurringType, id]);
+    await db.query(
+      `UPDATE expenses 
+      SET amount = $1, description = $2, category_id = $3, date = $4, recurring = $5, recurring_type = $6
+      WHERE id = $7`,
+      [amount, description, categoryId, date, recurring, recurringType, id]
+    );
 
-    const expense = await db.get(`
-      SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+    const expenseResult = await db.query(
+      `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
       FROM expenses e
       LEFT JOIN categories c ON e.category_id = c.id
-      WHERE e.id = ?
-    `, [id]);
+      WHERE e.id = $1`,
+      [id]
+    );
+    const expense = expenseResult.rows[0];
 
     return NextResponse.json({ expense });
   } catch (error) {
@@ -129,12 +140,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verificar se a despesa pertence ao usuário
-    const existingExpense = await db.get('SELECT user_id FROM expenses WHERE id = ?', [id]);
+  const existingExpenseResult = await db.query('SELECT user_id FROM expenses WHERE id = $1', [id]);
+  const existingExpense = existingExpenseResult.rows[0];
     if (!existingExpense || existingExpense.user_id !== user.userId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
 
-    await db.run('DELETE FROM expenses WHERE id = ?', [id]);
+  await db.query('DELETE FROM expenses WHERE id = $1', [id]);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {

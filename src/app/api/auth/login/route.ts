@@ -16,13 +16,16 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
 
     // Buscar usuário
-    const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    console.log('Tentando login para:', email, 'Encontrado:', !!user);
     if (!user) {
       return NextResponse.json({ error: 'Email ou senha inválidos' }, { status: 401 });
     }
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('Senha correta?', isValidPassword);
     if (!isValidPassword) {
       return NextResponse.json({ error: 'Email ou senha inválidos' }, { status: 401 });
     }
@@ -42,10 +45,13 @@ export async function POST(request: NextRequest) {
     // Definir cookie httpOnly
     response.cookies.set('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
     });
+
+    console.log('Tentando login para:', email, 'Encontrado:', !!user);
+    console.log('Senha correta?', isValidPassword);
 
     return response;
   } catch (error) {

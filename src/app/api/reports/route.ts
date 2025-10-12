@@ -22,39 +22,42 @@ export async function GET(request: NextRequest) {
     }
 
     // Totais por categoria no período
-    const totalsByCategory = await db.all(
+    const totalsByCategoryResult = await db.query(
       `SELECT c.id as categoryId, c.name, c.color, c.icon,
               COALESCE(SUM(e.amount), 0) as total
        FROM categories c
        LEFT JOIN expenses e
          ON e.category_id = c.id
-        AND e.user_id = ?
-        AND date(e.date) BETWEEN date(?) AND date(?)
-       WHERE c.user_id = ?
+        AND e.user_id = $1
+        AND date(e.date) BETWEEN date($2) AND date($3)
+       WHERE c.user_id = $4
        GROUP BY c.id, c.name, c.color, c.icon
        ORDER BY total DESC`,
       [user.userId, from.toISOString(), to.toISOString(), user.userId]
     );
+    const totalsByCategory = totalsByCategoryResult.rows;
 
     // Totais diários
-    const dailyTotals = await db.all(
+    const dailyTotalsResult = await db.query(
       `SELECT date(date) as day, COALESCE(SUM(amount), 0) as total
        FROM expenses
-       WHERE user_id = ? AND date(date) BETWEEN date(?) AND date(?)
+       WHERE user_id = $1 AND date(date) BETWEEN date($2) AND date($3)
        GROUP BY day
        ORDER BY day ASC`,
       [user.userId, from.toISOString(), to.toISOString()]
     );
+    const dailyTotals = dailyTotalsResult.rows;
 
     // Totais mensais (YYYY-MM)
-    const monthlyTotals = await db.all(
-      `SELECT strftime('%Y-%m', date) as ym, COALESCE(SUM(amount), 0) as total
+    const monthlyTotalsResult = await db.query(
+      `SELECT to_char(date, 'YYYY-MM') as ym, COALESCE(SUM(amount), 0) as total
        FROM expenses
-       WHERE user_id = ? AND date(date) BETWEEN date(?) AND date(?)
+       WHERE user_id = $1 AND date(date) BETWEEN date($2) AND date($3)
        GROUP BY ym
        ORDER BY ym ASC`,
       [user.userId, from.toISOString(), to.toISOString()]
     );
+    const monthlyTotals = monthlyTotalsResult.rows;
 
     return NextResponse.json({ totalsByCategory, dailyTotals, monthlyTotals });
   } catch (error) {

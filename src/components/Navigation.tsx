@@ -133,11 +133,11 @@ export default function Navigation() {
                   </button>
                   {adminOpen && (
                     <div className="absolute right-0 mt-2 w-40 bg-white rounded shadow-lg border border-yellow-200 z-50">
-                      <Link href="/admin/users" legacyBehavior>
-                        <a className="block px-4 py-2 text-sm text-gray-800 hover:bg-yellow-50 cursor-pointer" onClick={() => setAdminOpen(false)}>Usuários</a>
+                      <Link href="/admin/users" className="block px-4 py-2 text-sm text-gray-800 hover:bg-yellow-50 cursor-pointer" onClick={() => setAdminOpen(false)}>
+                        Usuários
                       </Link>
-                      <Link href="/admin/feedbacks" legacyBehavior>
-                        <a className="block px-4 py-2 text-sm text-gray-800 hover:bg-yellow-50 cursor-pointer" onClick={() => setAdminOpen(false)}>Feedbacks</a>
+                      <Link href="/admin/feedbacks" className="block px-4 py-2 text-sm text-gray-800 hover:bg-yellow-50 cursor-pointer" onClick={() => setAdminOpen(false)}>
+                        Feedbacks
                       </Link>
                     </div>
                   )}

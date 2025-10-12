@@ -8,18 +8,25 @@ export async function GET(request: NextRequest) {
   try {
     const user = requireAuth(request);
     const db = await getDatabase();
-    const userDb = await db.get('SELECT premium FROM users WHERE id = ?', [user.userId]);
-    if (!userDb?.premium) {
+  const result = await db.query('SELECT premium FROM users WHERE id = $1', [user.userId]);
+  const userDb = result.rows[0];
+  if (!userDb?.premium) {
       return NextResponse.json({ error: 'Recurso disponível apenas para usuários premium.' }, { status: 403 });
     }
-    const [categories, expenses, budgets, goals, achievements] = await Promise.all([
-      db.all('SELECT * FROM categories WHERE user_id = ?', [user.userId]),
-      db.all('SELECT * FROM expenses WHERE user_id = ?', [user.userId]),
-      db.all('SELECT * FROM budgets WHERE user_id = ?', [user.userId]),
-      db.all('SELECT * FROM financial_goals WHERE user_id = ?', [user.userId]),
-      db.all('SELECT * FROM achievements WHERE user_id = ?', [user.userId]),
+    const [categoriesRes, expensesRes, budgetsRes, goalsRes, achievementsRes] = await Promise.all([
+      db.query('SELECT * FROM categories WHERE user_id = $1', [user.userId]),
+      db.query('SELECT * FROM expenses WHERE user_id = $1', [user.userId]),
+      db.query('SELECT * FROM budgets WHERE user_id = $1', [user.userId]),
+      db.query('SELECT * FROM financial_goals WHERE user_id = $1', [user.userId]),
+      db.query('SELECT * FROM achievements WHERE user_id = $1', [user.userId]),
     ]);
-    return NextResponse.json({ categories, expenses, budgets, goals, achievements });
+    return NextResponse.json({
+      categories: categoriesRes.rows,
+      expenses: expensesRes.rows,
+      budgets: budgetsRes.rows,
+      goals: goalsRes.rows,
+      achievements: achievementsRes.rows
+    });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -35,32 +42,33 @@ export async function POST(request: NextRequest) {
   try {
     const user = requireAuth(request);
     const db = await getDatabase();
-    const userDb = await db.get('SELECT premium FROM users WHERE id = ?', [user.userId]);
-    if (!userDb?.premium) {
+  const result2 = await db.query('SELECT premium FROM users WHERE id = $1', [user.userId]);
+  const userDb2 = result2.rows[0];
+  if (!userDb2?.premium) {
       return NextResponse.json({ error: 'Recurso disponível apenas para usuários premium.' }, { status: 403 });
     }
     const data = await request.json();
     // Remove todos os dados antigos do usuário
-    await db.run('DELETE FROM categories WHERE user_id = ?', [user.userId]);
-    await db.run('DELETE FROM expenses WHERE user_id = ?', [user.userId]);
-    await db.run('DELETE FROM budgets WHERE user_id = ?', [user.userId]);
-    await db.run('DELETE FROM financial_goals WHERE user_id = ?', [user.userId]);
-    await db.run('DELETE FROM achievements WHERE user_id = ?', [user.userId]);
+  await db.query('DELETE FROM categories WHERE user_id = $1', [user.userId]);
+  await db.query('DELETE FROM expenses WHERE user_id = $1', [user.userId]);
+  await db.query('DELETE FROM budgets WHERE user_id = $1', [user.userId]);
+  await db.query('DELETE FROM financial_goals WHERE user_id = $1', [user.userId]);
+  await db.query('DELETE FROM achievements WHERE user_id = $1', [user.userId]);
     // Insere os dados importados
     for (const c of data.categories || []) {
-      await db.run('INSERT INTO categories (id, name, color, icon, budget, user_id) VALUES (?, ?, ?, ?, ?, ?)', [c.id, c.name, c.color, c.icon, c.budget, user.userId]);
+      await db.query('INSERT INTO categories (id, name, color, icon, budget, user_id) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING', [c.id, c.name, c.color, c.icon, c.budget, user.userId]);
     }
     for (const e of data.expenses || []) {
-      await db.run('INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type, tags, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [e.id, e.amount, e.description, e.category_id, e.date, user.userId, e.recurring, e.recurring_type, e.tags, e.created_at]);
+      await db.query('INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type, tags, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (id) DO NOTHING', [e.id, e.amount, e.description, e.category_id, e.date, user.userId, e.recurring, e.recurring_type, e.tags, e.created_at]);
     }
     for (const b of data.budgets || []) {
-      await db.run('INSERT INTO budgets (id, category_id, amount, period, user_id, created_at) VALUES (?, ?, ?, ?, ?, ?)', [b.id, b.category_id, b.amount, b.period, user.userId, b.created_at]);
+      await db.query('INSERT INTO budgets (id, category_id, amount, period, user_id, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING', [b.id, b.category_id, b.amount, b.period, user.userId, b.created_at]);
     }
     for (const g of data.goals || []) {
-      await db.run('INSERT INTO financial_goals (id, name, target_amount, current_amount, deadline, user_id, completed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [g.id, g.name, g.target_amount, g.current_amount, g.deadline, user.userId, g.completed, g.created_at]);
+      await db.query('INSERT INTO financial_goals (id, name, target_amount, current_amount, deadline, user_id, completed, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING', [g.id, g.name, g.target_amount, g.current_amount, g.deadline, user.userId, g.completed, g.created_at]);
     }
     for (const a of data.achievements || []) {
-      await db.run('INSERT INTO achievements (id, user_id, type, description, awarded_at) VALUES (?, ?, ?, ?, ?)', [a.id, user.userId, a.type, a.description, a.awarded_at]);
+      await db.query('INSERT INTO achievements (id, user_id, type, description, awarded_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING', [a.id, user.userId, a.type, a.description, a.awarded_at]);
     }
     return NextResponse.json({ success: true });
   } catch (error) {

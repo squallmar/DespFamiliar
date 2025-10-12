@@ -41,54 +41,102 @@ export async function GET(request: NextRequest) {
       { from: new Date(fromParam), to: new Date(toParam) } : 
       getMonthRange();
 
-    const expenses = await db.all(
+    const expensesResult = await db.query(
       `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
        FROM expenses e
        LEFT JOIN categories c ON e.category_id = c.id
-       WHERE e.user_id = ? AND datetime(e.date) BETWEEN datetime(?) AND datetime(?)
+       WHERE e.user_id = $1 AND date(e.date) >= date($2) AND date(e.date) <= date($3)
        ORDER BY e.date ASC`,
       [user.userId, from.toISOString(), to.toISOString()]
     );
+    const expenses = expensesResult.rows;
 
     // === PDF Export ===
     if (type === 'pdf') {
-      const PDFDocument = (await import('pdfkit')).default;
-      const doc = new PDFDocument({ margin: 30, size: 'A4' });
-      const chunks: Buffer[] = [];
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
 
-  doc.font('Times-Roman');
-  doc.fontSize(18).text('Relatório de Despesas', { align: 'center' }).moveDown();
-  doc.fontSize(10).text(`Período: ${formatDate(from)} a ${formatDate(to)}`).moveDown();
-  doc.fontSize(11);
-  doc.text('Data', 30, doc.y, { continued: true, width: 70 });
-  doc.text('Valor', 100, doc.y, { continued: true, width: 60 });
-  doc.text('Descrição', 160, doc.y, { continued: true, width: 150 });
-  doc.text('Categoria', 310, doc.y, { continued: true, width: 90 });
-  doc.text('Recorrente', 400, doc.y, { continued: true, width: 60 });
-  doc.text('Tags', 460, doc.y, { width: 100 });
-  doc.moveDown(0.5);
+  const pdfDoc = await PDFDocument.create();
+  let page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSizeTitle = 18;
+  const fontSizeSub = 10;
+  const fontSizeTable = 11;
+  let y = 800;
+
+      // Título
+      page.drawText('Relatório de Despesas', {
+        x: 50,
+        y,
+        size: fontSizeTitle,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= 30;
+      page.drawText(`Período: ${formatDate(from)} a ${formatDate(to)}`, {
+        x: 50,
+        y,
+        size: fontSizeSub,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= 30;
+
+      // Cabeçalho da tabela
+      const headers = ['Data', 'Valor', 'Descrição', 'Categoria', 'Recorrente', 'Tags'];
+      let x = 50;
+      headers.forEach((header, idx) => {
+        page.drawText(header, {
+          x,
+          y,
+          size: fontSizeTable,
+          font,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+        x += [70, 60, 150, 90, 60, 100][idx] || 60;
+      });
+      y -= 20;
 
       if (expenses.length === 0) {
-        doc.text('Nenhuma despesa encontrada para o período.', 30, doc.y + 10);
-      } else {
-        (expenses as Expense[]).forEach((e) => {
-          doc.text(formatDate(e.date), 30, doc.y, { continued: true, width: 70 });
-          doc.text(formatCurrency(Number(e.amount)), 100, doc.y, { continued: true, width: 60 });
-          doc.text(e.description, 160, doc.y, { continued: true, width: 150 });
-          doc.text(e.category_name ?? '', 310, doc.y, { continued: true, width: 90 });
-          doc.text(e.recurring ? 'Sim' : 'Não', 400, doc.y, { continued: true, width: 60 });
-          doc.text(e.tags ?? '', 460, doc.y, { width: 100 }).moveDown(0.5);
+        page.drawText('Nenhuma despesa encontrada para o período.', {
+          x: 50,
+          y,
+          size: fontSizeTable,
+          font,
+          color: rgb(0.5, 0, 0),
         });
+      } else {
+        for (const e of expenses) {
+          x = 50;
+          const row = [
+            formatDate(e.date),
+            formatCurrency(Number(e.amount)),
+            String(e.description),
+            String(e.category_name ?? ''),
+            e.recurring ? 'Sim' : 'Não',
+            String(e.tags ?? ''),
+          ];
+          row.forEach((cell, idx) => {
+            page.drawText(cell, {
+              x,
+              y,
+              size: fontSizeTable,
+              font,
+              color: rgb(0, 0, 0),
+              maxWidth: [70, 60, 150, 90, 60, 100][idx] || 60,
+            });
+            x += [70, 60, 150, 90, 60, 100][idx] || 60;
+          });
+          y -= 18;
+          if (y < 60) {
+            y = 800;
+            page = pdfDoc.addPage([595.28, 841.89]);
+          }
+        }
       }
 
-      doc.end();
-      const pdfBuffer: Buffer = await new Promise((resolve) => {
-        doc.on('end', () => resolve(Buffer.concat(chunks)));
-      });
-
+      const pdfBytes = await pdfDoc.save();
       const filename = `export-despesas-${from.toISOString().slice(0,10)}_a_${to.toISOString().slice(0,10)}.pdf`;
-  return new NextResponse(pdfBuffer as unknown as BodyInit, {
+      return new NextResponse(Buffer.from(pdfBytes), {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',

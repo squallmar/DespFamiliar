@@ -500,8 +500,8 @@ export default function ReportsPage() {
                       </ResponsiveContainer>
                     </div>
                     <ul className="text-sm text-gray-700 space-y-1">
-                      {data.totalsByCategory.map((c) => (
-                        <li key={c.categoryId} className="flex justify-between">
+                      {data.totalsByCategory.map((c, idx) => (
+                        <li key={c.categoryId || c.name + c.icon || idx} className="flex justify-between">
                           <span className="flex items-center gap-2"><span style={{ backgroundColor: c.color }} className="inline-block w-3 h-3 rounded" />{c.icon} {translateCategory(c.name)}</span>
                           <span>{formatCurrency(Number(c.total))}</span>
                         </li>

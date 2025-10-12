@@ -6,10 +6,11 @@ export async function GET(request: NextRequest) {
   try {
     const user = requireAuth(request);
     const db = await getDatabase();
-    const achievements = await db.all(
-      'SELECT id, type, description, awarded_at FROM achievements WHERE user_id = ? ORDER BY awarded_at ASC',
+    const achievementsResult = await db.query(
+      'SELECT id, type, description, awarded_at FROM achievements WHERE user_id = $1 ORDER BY awarded_at ASC',
       [user.userId]
     );
+    const achievements = achievementsResult.rows;
     return NextResponse.json({ achievements });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {

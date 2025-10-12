@@ -28,28 +28,31 @@ export async function GET(request: NextRequest) {
     const { from, to } = getPeriodRange(period);
 
     // Totais
-    const total = await db.get(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE user_id = ? AND date(date) BETWEEN date(?) AND date(?)`,
+    const totalResult = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE user_id = $1 AND date(date) BETWEEN date($2) AND date($3)`,
       [user.userId, from.toISOString(), to.toISOString()]
     );
+    const total = totalResult.rows[0];
     // Top categorias
-    const topCategories = await db.all(
+    const topCategoriesResult = await db.query(
       `SELECT c.name, c.icon, COALESCE(SUM(e.amount), 0) as total
        FROM categories c
-       LEFT JOIN expenses e ON c.id = e.category_id AND e.user_id = ? AND date(e.date) BETWEEN date(?) AND date(?)
-       WHERE c.user_id = ?
+       LEFT JOIN expenses e ON c.id = e.category_id AND e.user_id = $1 AND date(e.date) BETWEEN date($2) AND date($3)
+       WHERE c.user_id = $4
        GROUP BY c.id, c.name, c.icon
        ORDER BY total DESC
        LIMIT 3`,
       [user.userId, from.toISOString(), to.toISOString(), user.userId]
     );
+    const topCategories = topCategoriesResult.rows;
     // Gastos diários
-    const daily = await db.all(
+    const dailyResult = await db.query(
       `SELECT date(date) as day, COALESCE(SUM(amount), 0) as total
-       FROM expenses WHERE user_id = ? AND date(date) BETWEEN date(?) AND date(?)
+       FROM expenses WHERE user_id = $1 AND date(date) BETWEEN date($2) AND date($3)
        GROUP BY day ORDER BY day ASC`,
       [user.userId, from.toISOString(), to.toISOString()]
     );
+    const daily = dailyResult.rows;
     // Alertas (reaproveita lógica do /api/alerts)
     const alertsRes = await fetch(`${request.nextUrl.origin}/api/alerts`, { headers: { cookie: request.headers.get('cookie') || '' } });
     const alerts = alertsRes.ok ? await alertsRes.json() : [];

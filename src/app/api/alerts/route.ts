@@ -12,21 +12,23 @@ export async function GET(request: NextRequest) {
     const year = now.getFullYear().toString();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
 
-    const budgets = await db.all(
+    const budgetsResult = await db.query(
       `SELECT b.id, b.category_id, b.amount AS budget_amount, c.name AS category_name, c.color, c.icon
        FROM budgets b
        JOIN categories c ON c.id = b.category_id
-       WHERE b.user_id = ?`,
+       WHERE b.user_id = $1`,
       [user.userId]
     );
+    const budgets = budgetsResult.rows;
 
-    const expensesByCategory = await db.all(
+    const expensesByCategoryResult = await db.query(
       `SELECT category_id, COALESCE(SUM(amount), 0) as total
        FROM expenses
-       WHERE user_id = ? AND strftime('%Y', date) = ? AND strftime('%m', date) = ?
+       WHERE user_id = $1 AND EXTRACT(YEAR FROM date::date) = $2 AND EXTRACT(MONTH FROM date::date) = $3
        GROUP BY category_id`,
       [user.userId, year, month]
     );
+    const expensesByCategory = expensesByCategoryResult.rows;
 
     const mapTotals = new Map<string, number>();
     for (const row of expensesByCategory) {
@@ -53,20 +55,22 @@ export async function GET(request: NextRequest) {
     });
 
     // Pico de gastos (mês atual): média diária x último dia
-    const totals = await db.get(
+    const totalsResult = await db.query(
       `SELECT COALESCE(SUM(amount), 0) as total
        FROM expenses
-       WHERE user_id = ? AND strftime('%Y', date) = ? AND strftime('%m', date) = ?`,
+       WHERE user_id = $1 AND EXTRACT(YEAR FROM date::date) = $2 AND EXTRACT(MONTH FROM date::date) = $3`,
       [user.userId, year, month]
     );
+    const totals = totalsResult.rows[0] || { total: 0 };
 
     const lastDayStr = now.toISOString().slice(0, 10);
-    const lastDayTotalRow = await db.get(
+    const lastDayTotalResult = await db.query(
       `SELECT COALESCE(SUM(amount), 0) as total
        FROM expenses
-       WHERE user_id = ? AND date(date) = date(?)`,
+       WHERE user_id = $1 AND date::date = $2::date`,
       [user.userId, lastDayStr]
     );
+    const lastDayTotalRow = lastDayTotalResult.rows[0] || { total: 0 };
 
     const currentDay = now.getDate();
     const dailyAvg = currentDay > 0 ? (totals.total / currentDay) : 0;

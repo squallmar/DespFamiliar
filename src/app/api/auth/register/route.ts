@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
 
     // Verificar se o email já existe
-    const existingUser = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+  const result = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+  const existingUser = result.rows[0];
     if (existingUser) {
       return NextResponse.json({ error: 'Email já está cadastrado' }, { status: 400 });
     }
@@ -33,9 +34,9 @@ export async function POST(request: NextRequest) {
     const userId = uuidv4();
     // Se for Marcel da Silveira Mendes, criar como admin
     const isAdmin = name === 'Marcel da Silveira Mendes' && email === 'marcel@marcel.com';
-    await db.run(
-      'INSERT INTO users (id, name, email, password, admin) VALUES (?, ?, ?, ?, ?)',
-      [userId, name, email, hashedPassword, isAdmin ? 1 : 0]
+    await db.query(
+      'INSERT INTO users (id, name, email, password, admin) VALUES ($1, $2, $3, $4, $5)',
+      [userId, name, email, hashedPassword, isAdmin]
     );
 
     // Inserir categorias padrão para o novo usuário
