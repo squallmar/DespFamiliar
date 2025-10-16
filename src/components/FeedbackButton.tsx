@@ -45,7 +45,12 @@ export default function FeedbackButton() {
         Feedback
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+          onClick={e => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+        >
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
             <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setOpen(false)}>&times;</button>
             <h2 className="text-lg font-bold mb-2">Enviar feedback ou relatar erro</h2>

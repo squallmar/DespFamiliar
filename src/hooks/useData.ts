@@ -185,7 +185,7 @@ interface StatsData {
   }>;
 }
 
-export function useStats() {
+export function useStats(year?: number, month?: number) {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -193,7 +193,12 @@ export function useStats() {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/stats`, { credentials: 'include' });
+      const params = new URLSearchParams();
+      if (year) params.append('year', year.toString());
+      if (month) params.append('month', month.toString());
+      
+      const url = `/api/stats${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
       const data = await response.json();
       
       if (!response.ok) {
@@ -207,7 +212,7 @@ export function useStats() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [year, month]);
 
   useEffect(() => {
     fetchStats();

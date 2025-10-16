@@ -26,6 +26,7 @@ export async function getDatabase() {
 
     // Ensure premium column exists (for migration)
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium BOOLEAN DEFAULT FALSE');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT \'👤\'');
   }
   return pool;
 }

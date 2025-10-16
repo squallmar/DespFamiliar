@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
     const db = await getDatabase();
-  const userResult = await db.query('SELECT premium, admin FROM users WHERE id = $1', [decoded.userId]);
+  const userResult = await db.query('SELECT premium, admin, avatar FROM users WHERE id = $1', [decoded.userId]);
   const userDb = userResult.rows[0];
     return NextResponse.json({
       user: {
@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
         name: decoded.name,
         email: decoded.email,
         premium: !!(userDb && (userDb.premium || userDb.admin)),
-        admin: !!(userDb && userDb.admin)
+        admin: !!(userDb && userDb.admin),
+        avatar: userDb?.avatar || '👤'
       }
     });
   } catch (error) {

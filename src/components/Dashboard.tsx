@@ -11,15 +11,17 @@ import { AlertItem } from '@/types';
 type Achievement = { id: string; type: string; description: string; awarded_at: string };
 
 interface QuickAddExpenseProps {
-  onAddExpense: (expense: { amount: number; description: string; categoryId: string }) => Promise<void>;
+  onAddExpense: (expense: { amount: number; description: string; categoryId: string; recurrence: string }) => Promise<void>;
   categories: Array<{ id: string; name: string; color: string; icon: string }>;
   loading?: boolean;
 }
+
 
 function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseProps) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [recurrence, setRecurrence] = useState('single');
   const [submitting, setSubmitting] = useState(false);
   const { language } = useLocation();
   const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
@@ -33,11 +35,13 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
         await onAddExpense({
           amount: parseFloat(amount),
           description,
-          categoryId
+          categoryId,
+          recurrence
         });
         setAmount('');
         setDescription('');
         setCategoryId('');
+        setRecurrence('single');
       } catch (error) {
         console.error('Error adding expense:', error);
       } finally {
@@ -52,7 +56,7 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
         <PlusCircle className="mr-2 text-blue-600" size={20} />
         {t.quickAdd}
       </h3>
-      <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
+  <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
         <input
           type="number"
           placeholder={t.value}
@@ -82,6 +86,16 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
               {cat.icon} {categoriesMap[cat.name] || cat.name}
             </option>
           ))}
+        </select>
+        <select
+          value={recurrence}
+          onChange={e => setRecurrence(e.target.value)}
+          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={submitting}
+        >
+          <option value="single">{t.singleExpense || 'Despesa única'}</option>
+          <option value="monthly">{t.monthlyExpense || 'Mensal'}</option>
+          <option value="daily">{t.dailyExpense || 'Diária'}</option>
         </select>
         <button
           type="submit"
@@ -138,16 +152,40 @@ export default function Dashboard() {
   const { categories, loading: categoriesLoading } = useCategories();
   const { user } = useAuth();
   const { createExpense } = useExpenses();
-  const { stats, loading: statsLoading, refetch: refetchStats } = useStats();
+  
+  // Filtro de ano/mês
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  
+  // Usar hook de stats com os filtros de ano/mês
+  const { stats, loading: statsLoading, refetch: refetchStats } = useStats(selectedYear, selectedMonth);
   const { alerts, loading: alertsLoading } = useAlerts();
   const { achievements, isLoading: loadingAchievements } = useAchievements();
 
-  const handleAddExpense = async (expense: { amount: number; description: string; categoryId: string }) => {
+  const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
+  const months = [
+    { value: 1, label: 'Janeiro' },
+    { value: 2, label: 'Fevereiro' },
+    { value: 3, label: 'Março' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Maio' },
+    { value: 6, label: 'Junho' },
+    { value: 7, label: 'Julho' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Setembro' },
+    { value: 10, label: 'Outubro' },
+    { value: 11, label: 'Novembro' },
+    { value: 12, label: 'Dezembro' }
+  ];
+
+  const handleAddExpense = async (expense: { amount: number; description: string; categoryId: string; recurrence: string }) => {
     try {
       await createExpense({
         amount: expense.amount,
         description: expense.description,
         categoryId: expense.categoryId,
+        recurrence: expense.recurrence,
         date: new Date()
       });
       // Atualizar estatísticas após adicionar despesa
@@ -217,6 +255,41 @@ export default function Dashboard() {
     <div className="p-6 bg-gray-50 min-h-screen relative">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.dashboard} - {translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.appName}</h1>
+        
+        {/* Filtro de ano/mês */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex gap-4 items-center flex-wrap">
+            <Calendar className="text-blue-600" size={20} />
+            <span className="text-sm font-medium text-gray-700">
+              {language === 'en-US' ? 'Period:' : language === 'es-ES' ? 'Período:' : 'Período:'}
+            </span>
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(Number(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {months.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={e => setSelectedYear(Number(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {years.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            {statsLoading && (
+              <div className="flex items-center text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                {language === 'en-US' ? 'Loading...' : language === 'es-ES' ? 'Cargando...' : 'Carregando...'}
+              </div>
+            )}
+          </div>
+        </div>
+
         {conquistasPanel}
         {/* Painel de Alertas */}
         <div className="mb-6">
@@ -250,7 +323,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-        <QuickAddExpense onAddExpense={handleAddExpense} categories={categories} loading={categoriesLoading} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
             title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.thisMonthSpending || 'Gastos Este Mês'}

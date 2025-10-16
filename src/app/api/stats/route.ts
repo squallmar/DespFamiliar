@@ -7,9 +7,14 @@ export async function GET(request: NextRequest) {
     const user = requireAuth(request);
     const db = await getDatabase();
     
+    // Pegar parâmetros da URL ou usar mês/ano atual
+    const { searchParams } = new URL(request.url);
+    const yearParam = searchParams.get('year');
+    const monthParam = searchParams.get('month');
+    
     const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
+    const currentMonth = monthParam ? parseInt(monthParam) : now.getMonth() + 1;
+    const currentYear = yearParam ? parseInt(yearParam) : now.getFullYear();
     const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
     const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
     
@@ -68,15 +73,18 @@ export async function GET(request: NextRequest) {
     );
     const categoryStats = categoryStatsResult.rows;
     
-    // Últimas despesas
+
+    // Últimas despesas do mês/ano atual
     const recentExpensesResult = await db.query(
       `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
       FROM expenses e
       LEFT JOIN categories c ON e.category_id = c.id
       WHERE e.user_id = $1
+        AND EXTRACT(YEAR FROM e.date::date) = $2
+        AND EXTRACT(MONTH FROM e.date::date) = $3
       ORDER BY e.date DESC
       LIMIT 10`,
-      [user.userId]
+      [user.userId, currentYear, currentMonth]
     );
     const recentExpenses = recentExpensesResult.rows;
     

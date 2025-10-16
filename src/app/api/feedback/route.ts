@@ -1,25 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+
+import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { v4 as uuidv4 } from 'uuid';
-import { getServerSession } from 'next-auth';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
     const db = await getDatabase();
-    const { message, email, page } = await req.json();
+    const { message, email, page } = await request.json();
     if (!message || typeof message !== 'string' || message.length < 5) {
       return NextResponse.json({ error: 'Mensagem muito curta.' }, { status: 400 });
     }
     // Tenta obter usuário autenticado (opcional)
-    let user_id = null;
-    try {
-      // Se usar next-auth, pode tentar pegar o id do usuário
-      const session = await getServerSession();
-      if (session?.user?.id) user_id = session.user.id;
-    } catch {}
+    const user_id = null; // Se quiser autenticação, use seu próprio método aqui
     const id = uuidv4();
-    await db.run(
-      'INSERT INTO feedbacks (id, user_id, email, message, page) VALUES (?, ?, ?, ?, ?)',
+    await db.query(
+      'INSERT INTO feedbacks (id, user_id, email, message, page) VALUES ($1, $2, $3, $4, $5)',
       [id, user_id, email || null, message, page || null]
     );
     return NextResponse.json({ success: true });

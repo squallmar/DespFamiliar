@@ -3,36 +3,42 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLocation } from '@/contexts/LocationContext';
-import translations from '@/lib/translations';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
 
-// Lista de avatares predefinidos - sem tons de pele para evitar problemas
+// Lista de avatares predefinidos - Pessoas Realistas & Profissionais
 const AVATARS = [
-  // Pessoas básicas
-  '👨', '👩', '🧑', '👦', '👧', '👶',
-  '👴', '👵', '🧓', '🧔', '🤵', '👰',
+  // Pessoas diversas - tons de pele variados
+  '�🏻', '👩🏻', '🧑🏻', '👨🏼', '👩🏼', '🧑🏼',
+  '👨🏽', '👩🏽', '🧑🏽', '�🏾', '👩🏾', '🧑🏾',
+  '👨🏿', '�🏿', '🧑🏿',
   
-  // Profissionais
-  '👨‍💼', '👩‍💼', '👨‍💻', '👩‍💻', '👨‍🎓', '👩‍🎓',
-  '👨‍⚕️', '👩‍⚕️', '👨‍🔧', '👩‍🔧', '👨‍🍳', '👩‍🍳',
-  '👨‍🎨', '👩‍🎨', '👨‍🏫', '👩‍🏫', '👨‍🚀', '👩‍🚀',
+  // Profissionais modernos
+  '👨🏻‍💼', '👩🏻‍💼', '👨🏽‍💼', '👩🏽‍💼', '👨🏿‍💼', '👩�‍💼',
+  '👨🏻‍💻', '👩🏻‍💻', '👨🏽‍💻', '👩�‍💻', '👨🏿‍💻', '👩🏿‍💻',
+  '👨🏻‍🎓', '👩🏻‍🎓', '👨🏽‍🎓', '👩🏽‍🎓',
   
-  // Personagens
-  '🤴', '👸', '🦸', '🦹', '🧙', '🧚',
-  '🧛', '🧝', '🧞', '🧟',
+  // Profissionais de saúde
+  '�🏻‍⚕️', '👩🏻‍⚕️', '👨🏽‍⚕️', '�🏽‍⚕️', '👨🏿‍⚕️', '👩🏿‍⚕️',
   
-  // Animais fofos
+  // Outros profissionais
+  '👨🏻‍🔧', '�🏻‍🔧', '�👨🏻‍🍳', '👩🏻‍🍳', '👨🏻‍🎨', '👩🏻‍🎨',
+  '👨🏻‍🏫', '👩🏻‍🏫', '👨🏻‍🚀', '👩🏻‍🚀', '👨🏻‍✈️', '👩🏻‍✈️',
+  
+  // Estilos diversos
+  '🧔🏻', '🧔🏽', '🧔🏿', '👴🏻', '👵🏻', '🧓🏻', '🧓🏽',
+  '🤵🏻', '🤵🏽', '�🏻', '👰🏽', '�🏻', '👸🏻',
+  
+  // Personagens modernos
+  '🦸🏻', '�🏽', '🦸🏿', '🦹🏻', '🦹🏽', '🦹🏿',
+  '🧙🏻', '🧙🏽', '🧚🏻', '🧚🏽', '🧛🏻', '🧛🏽',
+  '🧝🏻', '🧝🏽', '🧞', '🧟',
+  
+  // Animais fofos (mantidos por diversão)
   '🐶', '🐱', '🐭', '🐹', '🐰', '🦊',
   '🐻', '🐼', '🐨', '🐯', '🦁', '🐮',
   '🐷', '🐸', '🐵', '🐔', '🐧', '🦉',
-  '🦄', '🦋', '🐝', '🐞', '🦇', '🦅',
-  
-  // Emojis expressivos
-  '😀', '😃', '😄', '😁', '😊', '😇',
-  '🙂', '🤗', '🤩', '😎', '🤓', '🧐',
-  '😌', '😏', '🥳', '🤠', '🥸', '🤡'
+  '🦄', '🦋', '🐝', '🐞', '🦇', '🦅'
 ];
 
 export default function ProfilePage() {
@@ -45,8 +51,6 @@ export default function ProfilePage() {
 
 function ProfileContent() {
   const { user, refreshUser } = useAuth();
-  const { language } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -78,13 +82,13 @@ function ProfileContent() {
 
     // Validação de senha
     if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
-  setMessage({ type: 'error', text: t.passwordsDontMatch });
+      setMessage({ type: 'error', text: 'As senhas não coincidem' });
       setLoading(false);
       return;
     }
 
     if (formData.newPassword && formData.newPassword.length < 6) {
-      setMessage({ type: 'error', text: t.passwordMinLength });
+      setMessage({ type: 'error', text: 'A senha deve ter no mínimo 6 caracteres' });
       setLoading(false);
       return;
     }
@@ -117,10 +121,10 @@ function ProfileContent() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || t.error);
+        throw new Error(data.error || 'Erro ao atualizar perfil');
       }
 
-      setMessage({ type: 'success', text: t.profileUpdated });
+      setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
       
       // Limpa os campos de senha
       setFormData(prev => ({
@@ -134,7 +138,7 @@ function ProfileContent() {
       await refreshUser();
 
     } catch (error) {
-  setMessage({ type: 'error', text: error instanceof Error ? error.message : t.error });
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao atualizar perfil' });
     } finally {
       setLoading(false);
     }
@@ -151,8 +155,8 @@ function ProfileContent() {
               {formData.avatar}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{t.profileTitle}</h1>
-              <p className="text-sm text-gray-500">{t.profileSubtitle}</p>
+              <h1 className="text-2xl font-bold text-gray-900">Meu Perfil</h1>
+              <p className="text-sm text-gray-500">Gerencie suas informações pessoais</p>
             </div>
           </div>
 
@@ -172,15 +176,17 @@ function ProfileContent() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Avatar */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">{t.avatar}</h2>
-              <p className="text-sm text-gray-500 mb-4">{t.chooseAvatar}</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Avatar</h2>
+              <p className="text-sm text-gray-500 mb-4">Escolha um avatar que represente você</p>
+              
               {/* Avatar selecionado em destaque */}
               <div className="mb-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 flex items-center justify-center">
                 <div className="text-center">
                   <div className="text-6xl mb-2">{formData.avatar}</div>
-                  <p className="text-sm text-gray-600 font-medium">{t.selectedAvatar}</p>
+                  <p className="text-sm text-gray-600 font-medium">Avatar selecionado</p>
                 </div>
               </div>
+              
               {/* Galeria de avatares */}
               <div className="max-h-80 overflow-y-auto border rounded-lg p-3 bg-gray-50">
                 <div className="grid grid-cols-6 sm:grid-cols-10 md:grid-cols-12 gap-1.5">
@@ -194,7 +200,7 @@ function ProfileContent() {
                           ? 'bg-blue-500 ring-2 ring-blue-600 scale-110 shadow-lg'
                           : 'bg-white hover:bg-blue-50 shadow-sm'
                       }`}
-                      title={t.avatar}
+                      title="Selecionar avatar"
                     >
                       {avatar}
                     </button>
@@ -205,11 +211,12 @@ function ProfileContent() {
 
             {/* Informações Básicas */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t.basicInfo}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Informações Básicas</h2>
+              
               <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.fullName}
+                    Nome Completo
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -223,9 +230,10 @@ function ProfileContent() {
                     />
                   </div>
                 </div>
+
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.email}
+                    Email
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -244,12 +252,13 @@ function ProfileContent() {
 
             {/* Alterar Senha */}
             <div className="border-t pt-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t.changePassword}</h2>
-              <p className="text-sm text-gray-500 mb-4">{t.leaveBlankPassword}</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Alterar Senha</h2>
+              <p className="text-sm text-gray-500 mb-4">Deixe em branco se não quiser alterar a senha</p>
+              
               <div className="space-y-4">
                 <div>
                   <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.currentPassword}
+                    Senha Atual
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -259,13 +268,14 @@ function ProfileContent() {
                       value={formData.currentPassword}
                       onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
                       className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder={t.currentPassword}
+                      placeholder="Digite sua senha atual"
                     />
                   </div>
                 </div>
+
                 <div>
                   <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.newPassword}
+                    Nova Senha
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -275,13 +285,14 @@ function ProfileContent() {
                       value={formData.newPassword}
                       onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                       className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder={t.newPassword}
+                      placeholder="Digite a nova senha"
                     />
                   </div>
                 </div>
+
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.confirmNewPassword}
+                    Confirmar Nova Senha
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -291,7 +302,7 @@ function ProfileContent() {
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                       className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder={t.confirmNewPassword}
+                      placeholder="Confirme a nova senha"
                     />
                   </div>
                 </div>
@@ -306,7 +317,7 @@ function ProfileContent() {
                 className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 disabled={loading}
               >
-                {t.cancel}
+                Cancelar
               </button>
               <button
                 type="submit"
@@ -314,25 +325,25 @@ function ProfileContent() {
                 disabled={loading}
               >
                 <Save className="h-5 w-5 mr-2" />
-                {loading ? t.saving : t.saveChanges}
+                {loading ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
           </form>
 
           {/* Informações da Conta */}
           <div className="mt-6 pt-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t.accountInfo}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Informações da Conta</h2>
             <div className="space-y-2 text-sm text-gray-600">
               <p>
-                <span className="font-medium">{t.status}:</span>{' '}
+                <span className="font-medium">Status:</span>{' '}
                 <span className={user.premium ? 'text-yellow-600 font-semibold' : 'text-gray-600'}>
-                  {user.premium ? `⭐ ${t.premium}` : t.free}
+                  {user.premium ? '⭐ Premium' : 'Gratuito'}
                 </span>
               </p>
               {user.admin && (
                 <p>
-                  <span className="font-medium">{t.type}:</span>{' '}
-                  <span className="text-yellow-600 font-semibold">👑 {t.admin}</span>
+                  <span className="font-medium">Tipo:</span>{' '}
+                  <span className="text-yellow-600 font-semibold">👑 Administrador</span>
                 </p>
               )}
             </div>

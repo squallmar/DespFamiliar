@@ -177,7 +177,7 @@ export default function ExpensesPage() {
                          expense.category_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !filterCategory || expense.categoryId === filterCategory;
     return matchesSearch && matchesCategory;
-  });
+  }).slice().reverse();
 
   const handleSave = async (expenseData: Partial<Expense>) => {
     setActionLoading(true);
@@ -253,7 +253,7 @@ export default function ExpensesPage() {
           <h1 className="text-3xl font-bold text-gray-900">{t.manageExpenses}</h1>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer"
           >
             <Plus className="mr-2 h-4 w-4" />
             {t.newExpense}
@@ -331,7 +331,9 @@ export default function ExpensesPage() {
                           <div className="text-sm font-medium text-gray-900">{expense.description}</div>
                           {expense.recurring && (
                             <div className="text-xs text-blue-600">
-                              {t.recurring} ({t[expense.recurringType as 'weekly'|'monthly'|'yearly']})
+                              {t.recurring}
+                              {(typeof expense.recurringType === 'string' && ['weekly','monthly','yearly'].includes(expense.recurringType))
+                                ? ` (${t[expense.recurringType as 'weekly'|'monthly'|'yearly']})` : ''}
                             </div>
                           )}
                         </div>
@@ -355,14 +357,14 @@ export default function ExpensesPage() {
                               setEditingExpense(expense);
                               setShowForm(true);
                             }}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-blue-600 hover:text-blue-900 cursor-pointer"
                             disabled={actionLoading}
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(expense.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-red-600 hover:text-red-900 cursor-pointer"
                             disabled={actionLoading}
                           >
                             <Trash2 className="h-4 w-4" />

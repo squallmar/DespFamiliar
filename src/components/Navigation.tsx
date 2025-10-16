@@ -138,7 +138,7 @@ export default function Navigation() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center hover:bg-gray-100 px-3 py-2 rounded-md transition-colors cursor-pointer"
                 >
-                  <User className="mr-2 h-4 w-4" />
+                  <span className="mr-2 text-xl">{user.avatar || '👤'}</span>
                   <span>{getFirstLast(user.name)}</span>
                 </button>
                 

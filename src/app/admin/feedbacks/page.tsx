@@ -58,7 +58,25 @@ export default function AdminFeedbacksPage() {
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-gray-400">{new Date(fb.created_at).toLocaleString()}</span>
                 {fb.email && <span className="ml-2 text-xs text-blue-600">{fb.email}</span>}
-                {fb.page && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{fb.page}</span>}
+                {fb.page && (
+                  <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                    {(() => {
+                      const pageMap: Record<string, string> = {
+                        '/profile': 'Perfil',
+                        '/': 'Dashboard',
+                        '/expenses': 'Despesas',
+                        '/projections': 'Projeções',
+                        '/reports': 'Relatórios',
+                        '/login': 'Login',
+                        '/register': 'Cadastro',
+                        '/reset': 'Recuperação de senha',
+                        '/admin/users': 'Admin: Usuários',
+                        '/admin/feedbacks': 'Admin: Feedbacks',
+                      };
+                      return pageMap[fb.page] || fb.page;
+                    })()}
+                  </span>
+                )}
               </div>
               <div className="text-gray-800 whitespace-pre-line">{fb.message}</div>
             </div>

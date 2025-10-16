@@ -4,6 +4,7 @@ export interface User {
   email: string;
   premium: boolean;
   admin?: boolean;
+  avatar?: string;
   createdAt: Date;
 }
 

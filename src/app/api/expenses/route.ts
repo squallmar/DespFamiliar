@@ -40,15 +40,61 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const expenseId = uuidv4();
-    const expenseDate = date || new Date().toISOString();
 
-
-    await db.query(
-      `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [expenseId, amount, description, categoryId, expenseDate, user.userId, recurring, recurringType]
-    );
+    // Se não for recorrente, insere normalmente
+    if (!recurring || !recurringType) {
+      const expenseId = uuidv4();
+      const expenseDate = date || new Date().toISOString();
+      await db.query(
+        `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [expenseId, amount, description, categoryId, expenseDate, user.userId, recurring, recurringType]
+      );
+    } else {
+      // Se for recorrente, cria para todos os meses restantes do ano (ou semanas/anos)
+      const startDate = date ? new Date(date) : new Date();
+      if (recurringType === 'monthly') {
+        // Cria para todos os meses restantes do ano, incluindo o mês inicial
+        let year = startDate.getFullYear();
+        let month = startDate.getMonth(); // 0-based
+        const day = startDate.getDate();
+        for (let m = month; m < 12; m++) {
+          const expenseId = uuidv4();
+          const expenseDate = new Date(year, m, day);
+          await db.query(
+            `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [expenseId, amount, description, categoryId, expenseDate.toISOString(), user.userId, recurring, recurringType]
+          );
+        }
+      } else if (recurringType === 'weekly') {
+        // Cria para as próximas 12 semanas
+        let current = new Date(startDate);
+        for (let i = 0; i < 12; i++) {
+          const expenseId = uuidv4();
+          await db.query(
+            `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [expenseId, amount, description, categoryId, current.toISOString(), user.userId, recurring, recurringType]
+          );
+          current.setDate(current.getDate() + 7);
+        }
+      } else if (recurringType === 'yearly') {
+        // Cria para os próximos 5 anos
+        let year = startDate.getFullYear();
+        const month = startDate.getMonth();
+        const day = startDate.getDate();
+        for (let y = 0; y < 5; y++) {
+          const expenseId = uuidv4();
+          const expenseDate = new Date(year + y, month, day);
+          await db.query(
+            `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [expenseId, amount, description, categoryId, expenseDate.toISOString(), user.userId, recurring, recurringType]
+          );
+        }
+      }
+    }
 
     // Premiar conquista "primeira despesa" se for a primeira do usuário
   const countResult = await db.query('SELECT COUNT(*) as total FROM expenses WHERE user_id = $1', [user.userId]);
@@ -65,14 +111,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const expenseResult = await db.query(
+    // Buscar a última despesa criada para retornar na resposta
+    const lastExpenseResult = await db.query(
       `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
       FROM expenses e
       LEFT JOIN categories c ON e.category_id = c.id
-      WHERE e.id = $1`,
-      [expenseId]
+      WHERE e.user_id = $1
+      ORDER BY e.date DESC, e.created_at DESC
+      LIMIT 1`,
+      [user.userId]
     );
-    const expense = expenseResult.rows[0];
+    const expense = lastExpenseResult.rows[0];
 
     return NextResponse.json({ expense }, { status: 201 });
   } catch (error) {

@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    const { name, email, currentPassword, newPassword } = await request.json();
+    const { name, email, avatar, currentPassword, newPassword } = await request.json();
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Nome e email são obrigatórios' }, { status: 400 });
@@ -46,28 +46,28 @@ export async function PUT(request: NextRequest) {
       // Atualiza com nova senha
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await db.query(
-        'UPDATE users SET name = $1, email = $2, password = $3 WHERE id = $4',
-        [name, email, hashedPassword, user.userId]
+        'UPDATE users SET name = $1, email = $2, password = $3, avatar = $4 WHERE id = $5',
+        [name, email, hashedPassword, avatar || '👤', user.userId]
       );
       
       return NextResponse.json({ 
         message: 'Perfil atualizado com sucesso',
-        user: { id: user.userId, name, email, premium: currentUser.premium, admin: currentUser.admin }
+        user: { id: user.userId, name, email, avatar: avatar || '👤', premium: currentUser.premium, admin: currentUser.admin }
       });
     } else {
-      // Atualiza apenas nome e email
+      // Atualiza apenas nome, email e avatar
       await db.query(
-        'UPDATE users SET name = $1, email = $2 WHERE id = $3',
-        [name, email, user.userId]
+        'UPDATE users SET name = $1, email = $2, avatar = $3 WHERE id = $4',
+        [name, email, avatar || '👤', user.userId]
       );
       
       // Busca dados atualizados do usuário
-      const updatedUser = await db.query('SELECT admin, premium FROM users WHERE id = $1', [user.userId]);
+      const updatedUser = await db.query('SELECT admin, premium, avatar FROM users WHERE id = $1', [user.userId]);
       const userData = updatedUser.rows[0];
       
       return NextResponse.json({ 
         message: 'Perfil atualizado com sucesso',
-        user: { id: user.userId, name, email, premium: userData.premium, admin: userData.admin }
+        user: { id: user.userId, name, email, avatar: userData.avatar, premium: userData.premium, admin: userData.admin }
       });
     }
 
