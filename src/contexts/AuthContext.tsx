@@ -11,6 +11,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -101,7 +102,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     register,
     logout,
-    checkAuth
+    checkAuth,
+    refreshUser: checkAuth
   };
 
   return (

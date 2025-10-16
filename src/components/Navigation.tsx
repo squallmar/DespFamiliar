@@ -10,7 +10,9 @@ import translations from "../lib/translations";
 
 export default function Navigation() {
   const [adminOpen, setAdminOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const adminRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Fecha o menu ao clicar fora
   useEffect(() => {
@@ -23,6 +25,18 @@ export default function Navigation() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [adminOpen]);
+
+  // Fecha o menu do usuário ao clicar fora
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [userMenuOpen]);
   const { user, logout } = useAuth();
   const router = useRouter();
   const { language, currency, setLanguage, setCurrency, loading } = useLocation();
@@ -119,8 +133,28 @@ export default function Navigation() {
               </select>
             </div>
             <div className="flex items-center text-sm text-gray-700">
-              <User className="mr-2 h-4 w-4" />
-              <span>{getFirstLast(user.name)}</span>
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center hover:bg-gray-100 px-3 py-2 rounded-md transition-colors cursor-pointer"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  <span>{getFirstLast(user.name)}</span>
+                </button>
+                
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <Link
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <User className="inline-block mr-2 h-4 w-4" />
+                      Meu Perfil
+                    </Link>
+                  </div>
+                )}
+              </div>
               {user.admin && (
                 <div className="ml-3 relative" ref={adminRef}>
                   <button
