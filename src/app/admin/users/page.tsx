@@ -42,8 +42,15 @@ export default function AdminUsersPage() {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-        <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-base font-semibold">{t.registeredUsers || 'Usuários cadastrados'}</span>
-        <span className="ml-2 text-gray-400 text-sm font-normal">({users.length})</span>
+        <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-base font-semibold">
+          {t.registeredUsers || 'Usuários cadastrados'}
+        </span>
+        <span className="relative ml-2 flex items-center" style={{height: '2.5rem'}}>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-300 opacity-60"></span>
+          <span className="inline-flex items-center justify-center px-2 py-1 text-sm font-bold leading-none text-blue-800 bg-blue-200 rounded-full border border-blue-400 shadow relative z-10">
+            {users.length}
+          </span>
+        </span>
       </h1>
       {loading ? (
         <div className="flex items-center gap-2 text-gray-500"><span className="animate-spin h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full"></span>{t.loading || 'Carregando...'}</div>
