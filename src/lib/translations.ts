@@ -1,6 +1,7 @@
 
 const translations = {
   'pt-BR': {
+    groupByCategorySuggestion: 'Para uma experiência melhor, ative o agrupamento por categoria acima!',
   singleExpense: 'Despesa única',
   monthlyExpense: 'Mensal',
   dailyExpense: 'Diária',
@@ -163,10 +164,13 @@ const translations = {
       'Lazer': 'Lazer',
       'Outros': 'Outros',
       'Educação': 'Educação',
-      'Vestuário': 'Vestuário'
+      'Vestuário': 'Vestuário',
+      'Dívidas': 'Dívidas',
+      'Cartões de Crédito': 'Cartões de Crédito'
     }
   },
   'en-US': {
+    groupByCategorySuggestion: 'For a better experience, enable grouping by category above!',
   singleExpense: 'Single expense',
   monthlyExpense: 'Monthly',
   dailyExpense: 'Daily',
@@ -329,10 +333,13 @@ const translations = {
       'Lazer': 'Leisure',
       'Outros': 'Others',
       'Educação': 'Education',
-      'Vestuário': 'Clothing'
+      'Vestuário': 'Clothing',
+      'Dívidas': 'Debts',
+      'Cartões de Crédito': 'Credit Cards'
     }
   },
   'es-ES': {
+    groupByCategorySuggestion: '¡Para una mejor experiencia, activa el agrupamiento por categoría arriba!',
   singleExpense: 'Gasto único',
   monthlyExpense: 'Mensual',
   dailyExpense: 'Diaria',
@@ -495,7 +502,9 @@ const translations = {
       'Lazer': 'Ocio',
       'Outros': 'Otros',
       'Educação': 'Educación',
-      'Vestuário': 'Vestimenta'
+      'Vestuário': 'Vestimenta',
+      'Dívidas': 'Deudas',
+      'Cartões de Crédito': 'Tarjetas de Crédito'
     }
   },
 };

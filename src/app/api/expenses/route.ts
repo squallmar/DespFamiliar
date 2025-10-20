@@ -7,18 +7,36 @@ export async function GET(request: NextRequest) {
   try {
     const user = requireAuth(request);
     const db = await getDatabase();
-    
-    const expensesResult = await db.query(
-      `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
-      FROM expenses e
-      LEFT JOIN categories c ON e.category_id = c.id
-      WHERE e.user_id = $1
-      ORDER BY e.date DESC
-      LIMIT 50`,
-      [user.userId]
-    );
+    const { searchParams } = new URL(request.url);
+    const year = searchParams.get('year');
+    const month = searchParams.get('month');
+    let expensesResult;
+    if (year && month) {
+      // Filtrar por mês/ano
+      expensesResult = await db.query(
+        `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE e.user_id = $1
+          AND EXTRACT(YEAR FROM e.date) = $2
+          AND EXTRACT(MONTH FROM e.date) = $3
+        ORDER BY e.date DESC
+        LIMIT 50`,
+        [user.userId, year, month]
+      );
+    } else {
+      // Sem filtro de período
+      expensesResult = await db.query(
+        `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE e.user_id = $1
+        ORDER BY e.date DESC
+        LIMIT 50`,
+        [user.userId]
+      );
+    }
     const expenses = expensesResult.rows;
-
     return NextResponse.json({ expenses });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
@@ -36,8 +54,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, description, categoryId, date, recurring = false, recurringType } = body;
 
-    if (!amount || !description || !categoryId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // Validação mais específica (permitir valor 0)
+    if (amount === undefined || amount === null || amount === '') {
+      return NextResponse.json({ error: 'Amount is required' }, { status: 400 });
+    }
+    if (!description || description.trim() === '') {
+      return NextResponse.json({ error: 'Description is required' }, { status: 400 });
+    }
+    if (!categoryId || categoryId.trim() === '') {
+      return NextResponse.json({ error: 'Category is required' }, { status: 400 });
     }
 
 

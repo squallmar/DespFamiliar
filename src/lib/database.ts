@@ -41,6 +41,8 @@ export async function insertDefaultCategories(userId: string) {
     { name: 'Educação', color: '#FECA57', icon: '📚' },
     { name: 'Lazer', color: '#FF9FF3', icon: '🎉' },
     { name: 'Vestuário', color: '#54A0FF', icon: '👕' },
+    { name: 'Dívidas', color: '#E74C3C', icon: '💳' },
+    { name: 'Cartões de Crédito', color: '#C0392B', icon: '💸' },
     { name: 'Outros', color: '#5F27CD', icon: '📦' }
   ];
 

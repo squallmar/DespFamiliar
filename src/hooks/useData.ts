@@ -55,21 +55,24 @@ export function useCategories() {
   return { categories, loading, error, createCategory, refetch: fetchCategories };
 }
 
-export function useExpenses() {
+
+export function useExpenses(year?: number, month?: number) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchExpenses = useCallback(async () => {
+  const fetchExpenses = useCallback(async (y = year, m = month) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/expenses`, { credentials: 'include' });
+      let url = `/api/expenses`;
+      if (y && m) {
+        url += `?year=${y}&month=${m}`;
+      }
+      const response = await fetch(url, { credentials: 'include' });
       const data = await response.json();
-      
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch expenses');
       }
-      
       setExpenses(data.expenses);
       setError(null);
     } catch (err) {
@@ -77,11 +80,11 @@ export function useExpenses() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [year, month]);
 
   useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
+    fetchExpenses(year, month);
+  }, [fetchExpenses, year, month]);
 
   type CreateExpenseInput = Omit<Expense, 'id' | 'createdAt' | 'userId'>;
   const createExpense = async (expenseData: CreateExpenseInput) => {
