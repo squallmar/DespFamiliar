@@ -102,7 +102,21 @@ export interface SpikeAlert {
   dailyAvg: number;
 }
 
-export type AlertItem = BudgetAlert | SpikeAlert;
+export interface BillAlert {
+  type: 'bill';
+  billId: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  categoryName?: string;
+  color?: string;
+  icon?: string;
+  isOverdue: boolean;
+  daysUntilDue: number;
+  level: 'ok' | 'warning' | 'danger';
+}
+
+export type AlertItem = BudgetAlert | SpikeAlert | BillAlert;
 
 // Relatórios
 export interface ReportTotalsByCategory {

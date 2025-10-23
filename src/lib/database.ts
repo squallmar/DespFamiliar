@@ -18,11 +18,14 @@ export async function getDatabase() {
     await pool.query('CREATE TABLE IF NOT EXISTS budgets (id TEXT PRIMARY KEY, category_id TEXT NOT NULL, amount REAL NOT NULL, period TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (category_id) REFERENCES categories (id), FOREIGN KEY (user_id) REFERENCES users (id))');
     await pool.query('CREATE TABLE IF NOT EXISTS financial_goals (id TEXT PRIMARY KEY, name TEXT NOT NULL, target_amount REAL NOT NULL, current_amount REAL DEFAULT 0, deadline TIMESTAMP NOT NULL, user_id TEXT NOT NULL, completed BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id))');
     await pool.query('CREATE TABLE IF NOT EXISTS achievements (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, type TEXT NOT NULL, description TEXT NOT NULL, awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id))');
+    await pool.query('CREATE TABLE IF NOT EXISTS bills (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, description TEXT NOT NULL, amount REAL NOT NULL, due_date TIMESTAMP NOT NULL, category_id TEXT, status TEXT DEFAULT \'pending\', paid_date TIMESTAMP, recurring BOOLEAN DEFAULT FALSE, recurring_type TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id), FOREIGN KEY (category_id) REFERENCES categories (id))');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses (user_id, date)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses (category_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_budgets_user ON budgets (user_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_goals_user ON financial_goals (user_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_achievements_user ON achievements (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_bills_user_due ON bills (user_id, due_date)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_bills_status ON bills (status)');
 
     // Ensure premium column exists (for migration)
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium BOOLEAN DEFAULT FALSE');

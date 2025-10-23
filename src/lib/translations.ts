@@ -1,6 +1,19 @@
 
 const translations = {
   'pt-BR': {
+    achievementsList: {
+      first_expense: 'Primeira despesa cadastrada!',
+      first_recurring: 'Primeira despesa recorrente cadastrada!',
+      all_categories: 'Gastou em todas as categorias!',
+      saved_month: 'Economizou no mês!',
+      goal_achieved: 'Meta de economia atingida!',
+      ten_expenses: '10 despesas cadastradas!',
+      hundred_expenses: '100 despesas cadastradas!',
+      under_budget: 'Gastos abaixo do orçamento em todas as categorias!',
+      first_export: 'Primeira exportação de dados!',
+      three_months_active: '3 meses seguidos usando o app!',
+      all: 'Todas as conquistas'
+    },
     groupByCategorySuggestion: 'Para uma experiência melhor, ative o agrupamento por categoria acima!',
   singleExpense: 'Despesa única',
   monthlyExpense: 'Mensal',
@@ -170,6 +183,19 @@ const translations = {
     }
   },
   'en-US': {
+    achievementsList: {
+      first_expense: 'First expense added!',
+      first_recurring: 'First recurring expense added!',
+      all_categories: 'Spent in all categories!',
+      saved_month: 'Saved money this month!',
+      goal_achieved: 'Savings goal achieved!',
+      ten_expenses: '10 expenses added!',
+      hundred_expenses: '100 expenses added!',
+      under_budget: 'Spent under budget in all categories!',
+      first_export: 'First data export!',
+      three_months_active: '3 months active in a row!',
+      all: 'All achievements'
+    },
     groupByCategorySuggestion: 'For a better experience, enable grouping by category above!',
   singleExpense: 'Single expense',
   monthlyExpense: 'Monthly',
@@ -339,6 +365,19 @@ const translations = {
     }
   },
   'es-ES': {
+    achievementsList: {
+      first_expense: '¡Primer gasto registrado!',
+      first_recurring: '¡Primer gasto recurrente registrado!',
+      all_categories: '¡Gastó en todas las categorías!',
+      saved_month: '¡Ahorró este mes!',
+      goal_achieved: '¡Meta de ahorro alcanzada!',
+      ten_expenses: '¡10 gastos registrados!',
+      hundred_expenses: '¡100 gastos registrados!',
+      under_budget: '¡Gastó por debajo del presupuesto en todas las categorías!',
+      first_export: '¡Primera exportación de datos!',
+      three_months_active: '¡3 meses seguidos usando la app!',
+      all: 'Todos los logros'
+    },
     groupByCategorySuggestion: '¡Para una mejor experiencia, activa el agrupamiento por categoría arriba!',
   singleExpense: 'Gasto único',
   monthlyExpense: 'Mensual',

@@ -84,7 +84,37 @@ export async function GET(request: NextRequest) {
       dailyAvg
     }] : [];
 
-    return NextResponse.json({ alerts: [...budgetAlerts, ...spikeAlert] });
+    // Alertas de contas a pagar (vencendo nos próximos 7 dias ou vencidas)
+    const billAlertsResult = await db.query(
+      `SELECT b.id, b.description, b.amount, b.due_date, b.status, c.name as category_name, c.color, c.icon
+       FROM bills b
+       LEFT JOIN categories c ON b.category_id = c.id
+       WHERE b.user_id = $1 AND b.status = 'pending' AND b.due_date <= NOW() + INTERVAL '7 days'
+       ORDER BY b.due_date ASC`,
+      [user.userId]
+    );
+
+    const billAlerts = billAlertsResult.rows.map((bill: any) => {
+      const dueDate = new Date(bill.due_date);
+      const isOverdue = dueDate < now;
+      const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      return {
+        type: 'bill',
+        billId: bill.id,
+        description: bill.description,
+        amount: bill.amount,
+        dueDate: bill.due_date,
+        categoryName: bill.category_name,
+        color: bill.color,
+        icon: bill.icon,
+        isOverdue,
+        daysUntilDue,
+        level: isOverdue ? 'danger' : (daysUntilDue <= 3 ? 'warning' : 'ok')
+      };
+    });
+
+    return NextResponse.json({ alerts: [...budgetAlerts, ...spikeAlert, ...billAlerts] });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });

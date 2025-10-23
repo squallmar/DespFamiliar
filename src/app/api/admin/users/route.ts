@@ -14,7 +14,16 @@ export async function GET(request: NextRequest) {
       console.log('Acesso negado para:', user.email);
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
-    const result = await db.query('SELECT id, name, email, admin, premium, avatar, created_at FROM users ORDER BY created_at DESC');
+    const result = await db.query(`
+      SELECT u.id, u.name, u.email, u.admin, u.premium, u.avatar, u.created_at,
+             COALESCE(a.count, 0) AS achievements_count
+      FROM users u
+      LEFT JOIN (
+        SELECT user_id, COUNT(*)::int as count
+        FROM achievements
+        GROUP BY user_id
+      ) a ON a.user_id = u.id
+      ORDER BY u.created_at DESC`);
     console.log('Usuários retornados:', result.rows.length);
     return NextResponse.json({ users: result.rows });
   } catch {

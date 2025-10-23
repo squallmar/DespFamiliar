@@ -1,17 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useRef, useState } from 'react';
+// import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from '@/contexts/LocationContext';
 import translations from '@/lib/translations';
 import { PlusCircle, TrendingUp, TrendingDown, Target, Calendar, Loader2, AlertTriangle, Trophy } from 'lucide-react';
 import { useCategories, useExpenses, useStats, useAlerts } from '@/hooks/useData';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AlertItem } from '@/types';
+import { useToast } from '@/contexts/ToastContext';
 type Achievement = { id: string; type: string; description: string; awarded_at: string };
 
 interface QuickAddExpenseProps {
-  onAddExpense: (expense: { amount: number; description: string; categoryId: string; recurrence: string }) => Promise<void>;
+  onAddExpense: (expense: { amount: number; description: string; categoryId: string; recurrence: string; date: string }) => Promise<void>;
   categories: Array<{ id: string; name: string; color: string; icon: string }>;
   loading?: boolean;
 }
@@ -22,6 +23,10 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [recurrence, setRecurrence] = useState('single');
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().slice(0, 10);
+  });
   const [submitting, setSubmitting] = useState(false);
   const { language } = useLocation();
   const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
@@ -29,19 +34,21 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount && description && categoryId && !submitting) {
+    if (amount && description && categoryId && date && !submitting) {
       setSubmitting(true);
       try {
         await onAddExpense({
           amount: parseFloat(amount),
           description,
           categoryId,
-          recurrence
+          recurrence,
+          date
         });
         setAmount('');
         setDescription('');
         setCategoryId('');
         setRecurrence('single');
+        setDate(new Date().toISOString().slice(0, 10));
       } catch (error) {
         console.error('Error adding expense:', error);
       } finally {
@@ -56,7 +63,7 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
         <PlusCircle className="mr-2 text-blue-600" size={20} />
         {t.quickAdd}
       </h3>
-  <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
         <input
           type="number"
           placeholder={t.value}
@@ -72,6 +79,13 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className="flex-2 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={submitting}
+        />
+        <input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={submitting}
         />
         <select
@@ -99,8 +113,8 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
         </select>
         <button
           type="submit"
-          disabled={submitting || loading || !amount || !description || !categoryId}
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          disabled={submitting || loading || !amount || !description || !categoryId || !date}
+          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
         >
           {submitting ? (
             <>
@@ -150,7 +164,6 @@ function StatsCard({ title, value, icon: Icon, trend, color, t }: {
 export default function Dashboard() {
   const { currency, language, loading: locationLoading } = useLocation();
   const { categories, loading: categoriesLoading } = useCategories();
-  const { user } = useAuth();
   const { createExpense } = useExpenses();
   
   // Filtro de ano/mês
@@ -162,6 +175,25 @@ export default function Dashboard() {
   const { stats, loading: statsLoading, refetch: refetchStats } = useStats(selectedYear, selectedMonth);
   const { alerts, loading: alertsLoading } = useAlerts();
   const { achievements, isLoading: loadingAchievements } = useAchievements();
+  const { show: showToast } = useToast();
+  const prevAchievementsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!loadingAchievements && achievements?.length) {
+      const currentIds = achievements.map((a: Achievement) => a.id);
+      const prev = prevAchievementsRef.current;
+      const newOnes = achievements.filter((a: Achievement) => !prev.includes(a.id));
+      if (newOnes.length > 0) {
+        const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'];
+        for (const ach of newOnes) {
+          const list = t?.achievementsList as Record<string, string> | undefined;
+          const label = list?.[ach.type] || ach.description;
+          showToast(label, 'success');
+        }
+      }
+      prevAchievementsRef.current = currentIds;
+    }
+  }, [achievements, loadingAchievements, language, showToast]);
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
   const months = [
@@ -179,15 +211,30 @@ export default function Dashboard() {
     { value: 12, label: 'Dezembro' }
   ];
 
-  const handleAddExpense = async (expense: { amount: number; description: string; categoryId: string; recurrence: string }) => {
+  const handleAddExpense = async (expense: { amount: number; description: string; categoryId: string; recurrence: string; date: string }) => {
     try {
-      await createExpense({
+      // Mapear para os campos esperados pela API: recurring e recurringType
+      const payload: {
+        amount: number;
+        description: string;
+        categoryId: string;
+        date: Date;
+        recurring?: boolean;
+        recurringType?: 'monthly' | 'weekly' | 'yearly';
+      } = {
         amount: expense.amount,
         description: expense.description,
         categoryId: expense.categoryId,
-        recurrence: expense.recurrence,
-        date: new Date()
-      });
+        date: new Date(expense.date)
+      };
+      if (expense.recurrence && expense.recurrence !== 'single') {
+        payload.recurring = true;
+        // Suporte: monthly | weekly | yearly (mapear 'daily' para 'weekly' por ora)
+        payload.recurringType = (['monthly', 'weekly', 'yearly'].includes(expense.recurrence)
+          ? expense.recurrence
+          : 'weekly') as 'monthly' | 'weekly' | 'yearly';
+      }
+      await createExpense(payload);
       // Atualizar estatísticas após adicionar despesa
       refetchStats();
     } catch (error) {
@@ -219,13 +266,18 @@ export default function Dashboard() {
         <div className="text-gray-500">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noAchievements || 'Nenhuma conquista ainda.'}</div>
       ) : (
         <ul className="space-y-2">
-          {achievements.map((ach: Achievement) => (
-            <li key={ach.id} className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-400" />
-              <span className="font-medium">{ach.description}</span>
-              <span className="text-xs text-gray-400 ml-auto">{new Date(ach.awarded_at).toLocaleDateString(language)}</span>
-            </li>
-          ))}
+          {achievements.map((ach: Achievement) => {
+            const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'];
+            const list = t?.achievementsList as Record<string, string> | undefined;
+            const label = list?.[ach.type] || ach.description;
+            return (
+              <li key={ach.id} className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-400" />
+                <span className="font-medium">{label}</span>
+                <span className="text-xs text-gray-400 ml-auto">{new Date(ach.awarded_at).toLocaleDateString(language)}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -290,6 +342,9 @@ export default function Dashboard() {
           </div>
         </div>
 
+  {/* Adicionar Despesa Rápida */}
+  <QuickAddExpense onAddExpense={handleAddExpense} categories={categories} loading={categoriesLoading} />
+
         {conquistasPanel}
         {/* Painel de Alertas */}
         <div className="mb-6">
@@ -309,6 +364,15 @@ export default function Dashboard() {
                         </span>
                         <span className={a.level === 'danger' ? 'text-red-600' : a.level === 'warning' ? 'text-yellow-700' : 'text-green-700'}>
                           {a.level === 'danger' ? (language === 'en-US' ? 'Exceeded' : language === 'es-ES' ? 'Excedido' : 'Estourado') : a.level === 'warning' ? (language === 'en-US' ? 'Near limit' : language === 'es-ES' ? 'Casi al límite' : 'Quase no limite') : 'OK'}
+                        </span>
+                      </>
+                    ) : a.type === 'bill' ? (
+                      <>
+                        <span>
+                          💳 <strong>{a.description}</strong> — {formatCurrency(a.amount)} — {a.isOverdue ? '⚠️ Vencida' : `Vence em ${a.daysUntilDue} dia(s)`}
+                        </span>
+                        <span className={a.level === 'danger' ? 'text-red-600 font-bold' : a.level === 'warning' ? 'text-orange-600 font-semibold' : 'text-gray-700'}>
+                          {a.isOverdue ? 'VENCIDA' : 'PRÓXIMA'}
                         </span>
                       </>
                     ) : (

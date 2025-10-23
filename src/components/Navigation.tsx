@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { BarChart3, Home, Receipt, TrendingUp, LogOut, User } from "lucide-react";
+import { BarChart3, Home, Receipt, TrendingUp, LogOut, User, Trophy } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useLocation } from "../contexts/LocationContext";
@@ -46,8 +46,7 @@ export default function Navigation() {
     if (!fullName) return '';
     const parts = fullName.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '';
-    if (parts.length === 1) return parts[0];
-    return `${parts[0]} ${parts[parts.length - 1]}`;
+    return parts[0];
   };
 
   const handleLogout = async () => {
@@ -75,34 +74,36 @@ export default function Navigation() {
             <div className="hidden sm:ml-6 sm:flex sm:space-x-4 flex-1 min-w-0">
               <Link
                 href="/"
-                className="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
-                style={{minWidth: 0}}
+                className="text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
               >
                 <Home className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{t.dashboard}</span>
+                <span className="whitespace-nowrap">{t.dashboard}</span>
               </Link>
               <Link
                 href="/expenses"
-                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
-                style={{minWidth: 0}}
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
               >
                 <Receipt className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{t.expenses}</span>
+                <span className="whitespace-nowrap">{t.expenses}</span>
               </Link>
               <Link
                 href="/projections"
-                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
-                style={{minWidth: 0}}
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
               >
                 <TrendingUp className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{t.projections}</span>
+                <span className="whitespace-nowrap">{t.projections}</span>
               </Link>
               <Link
                 href="/reports"
-                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium truncate max-w-[120px] cursor-pointer"
-                style={{minWidth: 0}}
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
               >
-                <span className="truncate">{t.reports}</span>
+                <span className="whitespace-nowrap">{t.reports}</span>
+              </Link>
+              <Link
+                href="/bills"
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
+              >
+                <span className="whitespace-nowrap">💳 Contas</span>
               </Link>
               {/* ADMIN badge destacado */}
               {/* ...existing code... */}
@@ -151,6 +152,37 @@ export default function Navigation() {
                     >
                       <User className="inline-block mr-2 h-4 w-4" />
                       Meu Perfil
+                    </Link>
+                    <Link
+                      href="/achievements"
+                      className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <Trophy className="inline-block mr-2 h-4 w-4" />
+                      {t.achievements || 'Conquistas'}
+                    </Link>
+                    <Link
+                      href="/help"
+                      className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        className="inline-block mr-2 h-4 w-4"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <path d="M12 17h.01"></path>
+                      </svg>
+                      Ajuda
                     </Link>
                   </div>
                 )}

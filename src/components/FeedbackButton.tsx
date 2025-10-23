@@ -37,12 +37,13 @@ export default function FeedbackButton() {
   return (
     <>
       <button
-        className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg p-4 flex items-center gap-2 focus:outline-none cursor-pointer"
+        className="fixed bottom-6 left-6 z-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg p-3 flex items-center gap-2 focus:outline-none cursor-pointer transition-all hover:scale-105"
         onClick={() => setOpen(true)}
         aria-label="Enviar feedback"
+        title="Enviar feedback ou relatar erro"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8a9 9 0 100-18 9 9 0 000 18zm3-7v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2a2 2 0 012-2h2a2 2 0 012 2z" /></svg>
-        Feedback
+        <span className="hidden sm:inline">Feedback</span>
       </button>
       {open && (
         <div

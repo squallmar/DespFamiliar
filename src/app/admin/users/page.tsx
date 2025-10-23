@@ -13,6 +13,7 @@ interface User {
   premium?: boolean;
   avatar?: string;
   created_at?: string;
+  achievements_count?: number;
 }
 
 export default function AdminUsersPage() {
@@ -109,6 +110,7 @@ export default function AdminUsersPage() {
                 <th className="px-4 py-3 text-center font-semibold text-gray-700">{t.admin || 'Admin'}</th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-700">{t.premium || 'Premium'}</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-700">{t.createdAt || 'Criado em'}</th>
+                <th className="px-4 py-3 text-center font-semibold text-gray-700">{t.achievements || 'Conquistas'}</th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-700">Ações</th>
               </tr>
             </thead>
@@ -147,6 +149,11 @@ export default function AdminUsersPage() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-gray-500">{u.created_at ? new Date(u.created_at).toLocaleString() : "-"}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-flex items-center justify-center min-w-10 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300 text-xs font-semibold">
+                      {u.achievements_count ?? 0}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button

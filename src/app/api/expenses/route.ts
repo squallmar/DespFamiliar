@@ -35,6 +35,35 @@ export async function GET(request: NextRequest) {
         LIMIT 50`,
         [user.userId]
       );
+
+        // 6. Uso contínuo (7 dias consecutivos)
+        const last7DaysResult = await db.query(
+          `SELECT DISTINCT DATE(date) as expense_date
+           FROM expenses
+           WHERE user_id = $1 AND date >= NOW() - INTERVAL '7 days'
+           ORDER BY DATE(date) DESC`,
+          [user.userId]
+        );
+        const uniqueDates = last7DaysResult.rows.map(r => new Date(r.expense_date).toISOString().slice(0, 10));
+        const today = new Date().toISOString().slice(0, 10);
+        let streak = 0;
+        for (let i = 0; i < 7; i++) {
+          const checkDate = new Date(today);
+          checkDate.setDate(checkDate.getDate() - i);
+          const checkDateStr = checkDate.toISOString().slice(0, 10);
+          if (uniqueDates.includes(checkDateStr)) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+        if (streak >= 7) {
+          const ach = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'continuous_use']);
+          if (!ach.rows[0]) {
+            await db.query('INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
+              [uuidv4(), user.userId, 'continuous_use', 'Uso contínuo de 7 dias!']);
+          }
+        }
     }
     const expenses = expensesResult.rows;
     return NextResponse.json({ expenses });
@@ -54,6 +83,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, description, categoryId, date, recurring = false, recurringType } = body;
 
+    const toYMD = (d: Date | string) => {
+      const dt = typeof d === 'string' ? new Date(d) : d;
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const clampDay = (year: number, monthIndex0: number, day: number) => {
+      const lastDay = new Date(year, monthIndex0 + 1, 0).getDate();
+      return Math.min(day, lastDay);
+    };
+
     // Validação mais específica (permitir valor 0)
     if (amount === undefined || amount === null || amount === '') {
       return NextResponse.json({ error: 'Amount is required' }, { status: 400 });
@@ -69,7 +111,8 @@ export async function POST(request: NextRequest) {
     // Se não for recorrente, insere normalmente
     if (!recurring || !recurringType) {
       const expenseId = uuidv4();
-      const expenseDate = date || new Date().toISOString();
+      const base = date ? new Date(date) : new Date();
+      const expenseDate = toYMD(base);
       await db.query(
         `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -80,59 +123,103 @@ export async function POST(request: NextRequest) {
       const startDate = date ? new Date(date) : new Date();
       if (recurringType === 'monthly') {
         // Cria para todos os meses restantes do ano, incluindo o mês inicial
-        let year = startDate.getFullYear();
-        let month = startDate.getMonth(); // 0-based
+        const year = startDate.getFullYear();
+        const month = startDate.getMonth(); // 0-based
         const day = startDate.getDate();
         for (let m = month; m < 12; m++) {
+          const safeDay = clampDay(year, m, day);
           const expenseId = uuidv4();
-          const expenseDate = new Date(year, m, day);
+          const expenseDate = new Date(year, m, safeDay);
           await db.query(
             `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [expenseId, amount, description, categoryId, expenseDate.toISOString(), user.userId, recurring, recurringType]
+            [expenseId, amount, description, categoryId, toYMD(expenseDate), user.userId, recurring, recurringType]
           );
         }
       } else if (recurringType === 'weekly') {
         // Cria para as próximas 12 semanas
-        let current = new Date(startDate);
+        const current = new Date(startDate);
         for (let i = 0; i < 12; i++) {
           const expenseId = uuidv4();
           await db.query(
             `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [expenseId, amount, description, categoryId, current.toISOString(), user.userId, recurring, recurringType]
+            [expenseId, amount, description, categoryId, toYMD(current), user.userId, recurring, recurringType]
           );
           current.setDate(current.getDate() + 7);
         }
       } else if (recurringType === 'yearly') {
         // Cria para os próximos 5 anos
-        let year = startDate.getFullYear();
+        const year = startDate.getFullYear();
         const month = startDate.getMonth();
         const day = startDate.getDate();
         for (let y = 0; y < 5; y++) {
           const expenseId = uuidv4();
-          const expenseDate = new Date(year + y, month, day);
+          const safeDay = clampDay(year + y, month, day);
+          const expenseDate = new Date(year + y, month, safeDay);
           await db.query(
             `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [expenseId, amount, description, categoryId, expenseDate.toISOString(), user.userId, recurring, recurringType]
+            [expenseId, amount, description, categoryId, toYMD(expenseDate), user.userId, recurring, recurringType]
           );
         }
       }
     }
 
-    // Premiar conquista "primeira despesa" se for a primeira do usuário
-  const countResult = await db.query('SELECT COUNT(*) as total FROM expenses WHERE user_id = $1', [user.userId]);
-  const count = countResult.rows[0];
+
+    // --- CONQUISTAS AUTOMÁTICAS ---
+    // 1. Primeira despesa
+    const countResult = await db.query('SELECT COUNT(*) as total FROM expenses WHERE user_id = $1', [user.userId]);
+    const count = countResult.rows[0];
     if (count.total === 1) {
-      // Só premia se ainda não existe
-    const achResult = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'first_expense']);
-    const ach = achResult.rows[0];
-      if (!ach) {
-        await db.query(
-          'INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
-          [uuidv4(), user.userId, 'first_expense', 'Primeira despesa cadastrada!']
-        );
+      const ach = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'first_expense']);
+      if (!ach.rows[0]) {
+        await db.query('INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
+          [uuidv4(), user.userId, 'first_expense', 'Primeira despesa cadastrada!']);
+      }
+    }
+
+    // 2. Primeira despesa recorrente
+    if (recurring && recurringType) {
+      const recCount = await db.query('SELECT COUNT(*) as total FROM expenses WHERE user_id = $1 AND recurring = true', [user.userId]);
+      if (Number(recCount.rows[0].total) === 1) {
+        const ach = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'first_recurring']);
+        if (!ach.rows[0]) {
+          await db.query('INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
+            [uuidv4(), user.userId, 'first_recurring', 'Primeira despesa recorrente cadastrada!']);
+        }
+      }
+    }
+
+    // 3. 10 despesas cadastradas
+    if (Number(count.total) === 10) {
+      const ach = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'ten_expenses']);
+      if (!ach.rows[0]) {
+        await db.query('INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
+          [uuidv4(), user.userId, 'ten_expenses', '10 despesas cadastradas!']);
+      }
+    }
+
+    // 4. 100 despesas cadastradas
+    if (Number(count.total) === 100) {
+      const ach = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'hundred_expenses']);
+      if (!ach.rows[0]) {
+        await db.query('INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
+          [uuidv4(), user.userId, 'hundred_expenses', '100 despesas cadastradas!']);
+      }
+    }
+
+    // 5. Gastou em todas as categorias
+    const userCategories = await db.query('SELECT id FROM categories WHERE user_id = $1', [user.userId]);
+    const userCategoryIds = userCategories.rows.map(row => row.id);
+    const usedCategories = await db.query('SELECT DISTINCT category_id FROM expenses WHERE user_id = $1', [user.userId]);
+    const usedCategoryIds = usedCategories.rows.map(row => row.category_id);
+    const allUsed = userCategoryIds.every(catId => usedCategoryIds.includes(catId));
+    if (userCategoryIds.length > 0 && allUsed) {
+      const ach = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'all_categories']);
+      if (!ach.rows[0]) {
+        await db.query('INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
+          [uuidv4(), user.userId, 'all_categories', 'Gastou em todas as categorias!']);
       }
     }
 
@@ -165,6 +252,14 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, amount, description, categoryId, date, recurring, recurringType } = body;
 
+    const toYMD = (d: Date | string) => {
+      const dt = typeof d === 'string' ? new Date(d) : d;
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
     if (!id) {
       return NextResponse.json({ error: 'Expense ID is required' }, { status: 400 });
     }
@@ -180,7 +275,7 @@ export async function PUT(request: NextRequest) {
       `UPDATE expenses 
       SET amount = $1, description = $2, category_id = $3, date = $4, recurring = $5, recurring_type = $6
       WHERE id = $7`,
-      [amount, description, categoryId, date, recurring, recurringType, id]
+      [amount, description, categoryId, toYMD(date), recurring, recurringType, id]
     );
 
     const expenseResult = await db.query(

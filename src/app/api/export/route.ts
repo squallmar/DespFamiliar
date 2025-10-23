@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 import * as XLSX from 'xlsx';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request: NextRequest) {
   // Definição de tipo para despesas
@@ -191,6 +192,13 @@ export async function GET(request: NextRequest) {
 
     const csvWithBom = '\uFEFF' + rows.join('\n');
     const filename = `export-despesas-${from.toISOString().slice(0,10)}_a_${to.toISOString().slice(0,10)}.csv`;
+
+    // --- CONQUISTA: Primeira exportação ---
+    const ach = await db.query('SELECT id FROM achievements WHERE user_id = $1 AND type = $2', [user.userId, 'first_export']);
+    if (!ach.rows[0]) {
+      await db.query('INSERT INTO achievements (id, user_id, type, description) VALUES ($1, $2, $3, $4)',
+        [uuidv4(), user.userId, 'first_export', 'Primeira exportação de dados!']);
+    }
 
     return new NextResponse(csvWithBom, {
       status: 200,

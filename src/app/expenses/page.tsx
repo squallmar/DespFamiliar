@@ -8,20 +8,29 @@ import { Expense } from '@/types';
 import { Edit, Trash2, Plus, Search, Filter, Loader2 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
+type ExpenseInput = Omit<Partial<Expense>, 'date'> & { date?: string | Date };
+
 interface ExpenseFormProps {
   expense?: Expense;
   categories: Array<{ id: string; name: string; icon: string }>;
-  onSave: (expense: Partial<Expense>) => Promise<void>;
+  onSave: (expense: ExpenseInput) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
 }
 
 function ExpenseForm({ expense, categories, onSave, onCancel, loading }: ExpenseFormProps) {
+  const toYMD = (d: Date | string) => {
+    const dt = typeof d === 'string' ? new Date(d) : d;
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
   const [formData, setFormData] = useState({
     amount: expense?.amount?.toString() || '',
     description: expense?.description || '',
     categoryId: expense?.categoryId || '',
-    date: expense?.date ? new Date(expense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    date: expense?.date ? toYMD(expense.date as unknown as Date) : toYMD(new Date()),
     recurring: expense?.recurring || false,
     recurringType: expense?.recurringType || 'monthly'
   });
@@ -45,7 +54,7 @@ function ExpenseForm({ expense, categories, onSave, onCancel, loading }: Expense
       amount: parseFloat(formData.amount),
       description: formData.description,
       categoryId: formData.categoryId,
-      date: new Date(formData.date),
+      date: formData.date, // envia YYYY-MM-DD para evitar fuso
       recurring: formData.recurring,
       recurringType: formData.recurring ? formData.recurringType as 'monthly' | 'weekly' | 'yearly' : undefined
     });
@@ -225,7 +234,7 @@ export default function ExpensesPage() {
     return acc;
   }, {} as Record<string, { expenses: typeof filteredExpenses; total: number; icon: string; color: string }>);
 
-  const handleSave = async (expenseData: Partial<Expense>) => {
+  const handleSave = async (expenseData: ExpenseInput) => {
     setActionLoading(true);
     try {
       if (editingExpense) {
@@ -281,8 +290,8 @@ export default function ExpensesPage() {
         <div className="text-center">
           <p className="text-red-600">{t.error}: {error}</p>
           <button 
-            onClick={refetch}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            onClick={() => refetch(selectedYear, selectedMonth)}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer"
           >
             {t.tryAgain}
           </button>
@@ -388,7 +397,7 @@ export default function ExpensesPage() {
           ) : groupByCategory ? (
             // Visualização agrupada por categoria
             <div className="p-6 space-y-6">
-              {Object.entries(groupedExpenses).map(([categoryName, { expenses: categoryExpenses, total, icon, color }]) => (
+              {Object.entries(groupedExpenses).map(([categoryName, { expenses: categoryExpenses, total, icon }]) => (
                 <div key={categoryName} className="border rounded-lg overflow-hidden">
                   <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-b">
                     <div className="flex items-center gap-3">

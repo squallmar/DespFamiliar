@@ -5,6 +5,7 @@ import { AuthProvider } from "../contexts/AuthContext";
 import { LocationProvider } from "../contexts/LocationContext";
 import NavigationComponent from "../components/Navigation";
 import FeedbackClientWrapper from '../components/FeedbackClientWrapper';
+import { ToastProvider } from '../contexts/ToastContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,10 +32,12 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <LocationProvider>
           <AuthProvider>
-            <NavigationComponent />
-            {children}
-            {/* Botão global de feedback */}
-            <FeedbackClientWrapper />
+            <ToastProvider>
+              <NavigationComponent />
+              {children}
+              {/* Botão global de feedback */}
+              <FeedbackClientWrapper />
+            </ToastProvider>
           </AuthProvider>
         </LocationProvider>
       </body>

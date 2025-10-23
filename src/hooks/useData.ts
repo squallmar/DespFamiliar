@@ -86,7 +86,7 @@ export function useExpenses(year?: number, month?: number) {
     fetchExpenses(year, month);
   }, [fetchExpenses, year, month]);
 
-  type CreateExpenseInput = Omit<Expense, 'id' | 'createdAt' | 'userId'>;
+  type CreateExpenseInput = Omit<Expense, 'id' | 'createdAt' | 'userId' | 'date'> & { date: string | Date };
   const createExpense = async (expenseData: CreateExpenseInput) => {
     try {
       const response = await fetch('/api/expenses', {
@@ -110,7 +110,8 @@ export function useExpenses(year?: number, month?: number) {
     }
   };
 
-  const updateExpense = async (id: string, expenseData: Partial<Expense>) => {
+  type UpdateExpenseInput = Partial<Omit<Expense, 'date'>> & { date?: string | Date };
+  const updateExpense = async (id: string, expenseData: UpdateExpenseInput) => {
     try {
       const response = await fetch('/api/expenses', {
         method: 'PUT',
