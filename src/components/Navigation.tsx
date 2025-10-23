@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { BarChart3, Home, Receipt, TrendingUp, LogOut, User, Trophy } from "lucide-react";
+import { BarChart3, Home, TrendingUp, LogOut, User, Trophy } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useLocation } from "../contexts/LocationContext";
@@ -79,12 +79,20 @@ export default function Navigation() {
                 <Home className="mr-2 h-4 w-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">{t.dashboard}</span>
               </Link>
+              {/* Link de Despesas desabilitado - funcionalidade movida para Contas
               <Link
                 href="/expenses"
                 className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
               >
                 <Receipt className="mr-2 h-4 w-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">{t.expenses}</span>
+              </Link>
+              */}
+              <Link
+                href="/bills"
+                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
+              >
+                <span className="whitespace-nowrap">💳 Contas</span>
               </Link>
               <Link
                 href="/projections"
