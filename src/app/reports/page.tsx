@@ -337,12 +337,22 @@ export default function ReportsPage() {
                     <div className="font-semibold text-yellow-700 mb-1">{t('alertsSection')}</div>
                     <ul className="text-sm text-gray-700 space-y-1">
                       {summary.alerts.length === 0 && <li>{t('noAlerts')}</li>}
-                      {summary.alerts.map((alert, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          {alert.type === 'budget' && <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: alert.color }}></span>}
-                          <span>{alert.type === 'budget' ? `${alert.categoryName}: ${Math.round(alert.usage*100)}% ${t('budgetUsage')} (${formatCurrency(alert.spent)} / ${formatCurrency(alert.budget)})` : alert.message}</span>
-                        </li>
-                      ))}
+                      {/* Remove duplicate bill alerts by unique key */}
+                      {(() => {
+                        const seen = new Set();
+                        return summary.alerts.filter(alert => {
+                          if (alert.type !== 'bill') return true;
+                          const key = `${alert.description}|${alert.amount}|${alert.dueDate}|${alert.status}`;
+                          if (seen.has(key)) return false;
+                          seen.add(key);
+                          return true;
+                        }).map((alert, i) => (
+                          <li key={i} className="flex items-center gap-2">
+                            {alert.type === 'budget' && <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: alert.color }}></span>}
+                            <span>{alert.type === 'budget' ? `${alert.categoryName}: ${Math.round(alert.usage*100)}% ${t('budgetUsage')} (${formatCurrency(alert.spent)} / ${formatCurrency(alert.budget)})` : alert.message}</span>
+                          </li>
+                        ));
+                      })()}
                     </ul>
                   </div>
                 </div>
@@ -490,8 +500,8 @@ export default function ReportsPage() {
                             outerRadius={90}
                             labelLine
                           >
-                            {pieData.map((entry) => (
-                              <Cell key={entry.categoryId} fill={entry.color} />
+                            {pieData.map((entry, idx) => (
+                              <Cell key={`${entry.categoryId || entry.name}-${idx}`} fill={entry.color} />
                             ))}
                           </Pie>
                           <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />

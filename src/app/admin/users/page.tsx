@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import translations from '@/lib/translations';
 import { useLocation } from '@/contexts/LocationContext';
-import { Trash2, X, Check } from 'lucide-react';
+import { Trash2, X, Check, Database } from 'lucide-react';
+  const [showFormatModal, setShowFormatModal] = useState(false);
+  const [formatConfirm, setFormatConfirm] = useState('');
+  const [formatting, setFormatting] = useState(false);
+  const [formatResult, setFormatResult] = useState<string|null>(null);
 
 interface User {
   id: string;
@@ -17,6 +21,10 @@ interface User {
 }
 
 export default function AdminUsersPage() {
+  const [showFormatModal, setShowFormatModal] = useState(false);
+  const [formatConfirm, setFormatConfirm] = useState('');
+  const [formatting, setFormatting] = useState(false);
+  const [formatResult, setFormatResult] = useState<string|null>(null);
   const { user } = useAuth();
   const { language } = useLocation();
   const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
@@ -84,6 +92,82 @@ export default function AdminUsersPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      {/* Botão de formatar banco (admin) */}
+      {user?.admin && (
+        <div className="mb-8 flex items-center gap-4">
+          <button
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded shadow hover:bg-red-700 font-bold border border-red-800 transition-colors cursor-pointer"
+            onClick={() => setShowFormatModal(true)}
+            disabled={formatting}
+            title="Apaga todos os dados, exceto usuários. Use com cuidado!"
+          >
+            <Database className="w-5 h-5" />
+            Formatar Banco (Preservar Usuários)
+          </button>
+          {formatResult && (
+            <span className={formatResult.startsWith('Sucesso') ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}>{formatResult}</span>
+          )}
+        </div>
+      )}
+      {/* Modal de confirmação de formatação do banco */}
+      {showFormatModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="bg-red-100 p-3 rounded-full mr-3">
+                <Database className="h-6 w-6 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Formatar Banco de Dados</h2>
+            </div>
+            <p className="text-gray-700 mb-2 font-semibold">Esta ação irá apagar <span className="text-red-600 font-bold">TODOS</span> os dados de despesas, contas, categorias, metas, conquistas, feedbacks, exceto os usuários.</p>
+            <p className="text-gray-600 mb-4">Esta ação é irreversível. Para confirmar, digite <span className="font-mono bg-gray-100 px-2 py-1 rounded">FORMATAR</span> abaixo.</p>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-red-400"
+              placeholder="Digite FORMATAR para confirmar"
+              value={formatConfirm}
+              onChange={e => setFormatConfirm(e.target.value)}
+              disabled={formatting}
+              autoFocus
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowFormatModal(false); setFormatConfirm(''); setFormatResult(null); }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                disabled={formatting}
+              >
+                <X className="h-4 w-4 inline mr-2" />
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  setFormatting(true);
+                  setFormatResult(null);
+                  try {
+                    const res = await fetch('/api/admin/format-db', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                      setFormatResult('Sucesso: Banco formatado!');
+                    } else {
+                      setFormatResult('Erro: ' + (data.error || 'Falha ao formatar banco.'));
+                    }
+                  } catch (e) {
+                    setFormatResult('Erro: Falha na requisição.');
+                  } finally {
+                    setFormatting(false);
+                    setFormatConfirm('');
+                  }
+                }}
+                className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer font-bold ${formatConfirm !== 'FORMATAR' || formatting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={formatConfirm !== 'FORMATAR' || formatting}
+              >
+                <Check className="h-4 w-4 inline mr-2" />
+                Confirmar Formatação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
         <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-base font-semibold">
           {t.registeredUsers || 'Usuários cadastrados'}

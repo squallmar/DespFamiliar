@@ -37,12 +37,12 @@ export default function FeedbackButton() {
   return (
     <>
       <button
-        className="fixed bottom-6 left-6 z-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg p-3 flex items-center gap-2 focus:outline-none cursor-pointer transition-all hover:scale-105"
-        onClick={() => setOpen(true)}
-        aria-label="Enviar feedback"
-        title="Enviar feedback ou relatar erro"
+        className="fixed bottom-6 left-6 z-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg p-3 flex items-center gap-2 focus:outline-none cursor-pointer transition-all hover:scale-105 cursor-pointer"
+        onClick={() => open ? setOpen(false) : setOpen(true)}
+        aria-label={open ? "Fechar feedback" : "Enviar feedback"}
+        title={open ? "Fechar feedback" : "Enviar feedback ou relatar erro"}
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8a9 9 0 100-18 9 9 0 000 18zm3-7v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2a2 2 0 012-2h2a2 2 0 012 2z" /></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         <span className="hidden sm:inline">Feedback</span>
       </button>
       {open && (
@@ -53,7 +53,14 @@ export default function FeedbackButton() {
           }}
         >
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-            <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setOpen(false)}>&times;</button>
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              onClick={() => setOpen(false)}
+              aria-label="Fechar feedback"
+              title="Fechar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
             <h2 className="text-lg font-bold mb-2">Enviar feedback ou relatar erro</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <textarea
@@ -77,7 +84,7 @@ export default function FeedbackButton() {
               {success && <div className="text-green-600 text-sm">Feedback enviado com sucesso!</div>}
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded disabled:opacity-50"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded disabled:opacity-50 cursor-pointer"
                 disabled={loading || !message.trim()}
               >
                 {loading ? 'Enviando...' : 'Enviar'}

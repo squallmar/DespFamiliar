@@ -27,29 +27,77 @@ export async function GET(request: NextRequest) {
     const period = (searchParams.get('period') as 'week' | 'month') || 'month';
     const { from, to } = getPeriodRange(period);
 
-    // Totais
+    // Totais (despesas + contas pagas)
     const totalResult = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE user_id = $1 AND date(date) BETWEEN date($2) AND date($3)`,
-      [user.userId, from.toISOString(), to.toISOString()]
-    );
-    const total = totalResult.rows[0];
-    // Top categorias
+        `SELECT COALESCE(SUM(total), 0) as total FROM (
+           SELECT COALESCE(SUM(e.amount), 0) as total
+           FROM expenses e
+           WHERE e.user_id = $1 AND date(e.date) BETWEEN date($2) AND date($3)
+           UNION ALL
+           SELECT COALESCE(SUM(b.amount), 0) as total
+           FROM bills b
+           WHERE b.user_id = $1 AND b.status = 'paid' AND b.paid_date IS NOT NULL AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%') AND date(b.paid_date) BETWEEN date($2) AND date($3)
+         ) t`,
+        [user.userId, from.toISOString(), to.toISOString()]
+      );
+      const total = totalResult.rows[0];
+    // Top categorias (despesas + contas pagas)
     const topCategoriesResult = await db.query(
-      `SELECT c.name, c.icon, COALESCE(SUM(e.amount), 0) as total
+      `SELECT c.name, c.icon,
+              COALESCE(SUM(e.amount), 0) + COALESCE(SUM(b.amount), 0) as total
        FROM categories c
-       LEFT JOIN expenses e ON c.id = e.category_id AND e.user_id = $1 AND date(e.date) BETWEEN date($2) AND date($3)
+       LEFT JOIN expenses e
+         ON c.id = e.category_id
+        AND e.user_id = $1
+        AND date(e.date) BETWEEN date($2) AND date($3)
+       LEFT JOIN bills b
+         ON c.id = b.category_id
+        AND b.user_id = $1
+        AND b.status = 'paid'
+        AND b.paid_date IS NOT NULL
+        AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%')
+        AND date(b.paid_date) BETWEEN date($2) AND date($3)
        WHERE c.user_id = $4
        GROUP BY c.id, c.name, c.icon
        ORDER BY total DESC
        LIMIT 3`,
       [user.userId, from.toISOString(), to.toISOString(), user.userId]
     );
-    const topCategories = topCategoriesResult.rows;
-    // Gastos diários
+    const topCategoriesBase = topCategoriesResult.rows as Array<{ name: string; icon: string; total: number }>;
+    // Adiciona bucket 'Sem categoria' (contas pagas sem categoria)
+    const uncategorizedBillsRes = await db.query(
+      `SELECT COALESCE(SUM(b.amount), 0) as total
+       FROM bills b
+       WHERE b.user_id = $1
+         AND b.status = 'paid'
+         AND b.paid_date IS NOT NULL
+         AND b.category_id IS NULL
+         AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%')
+         AND date(b.paid_date) BETWEEN date($2) AND date($3)`,
+      [user.userId, from.toISOString(), to.toISOString()]
+    );
+    const uncategorizedTotal = Number(uncategorizedBillsRes.rows[0]?.total || 0);
+    let topCategories = topCategoriesBase.slice();
+    if (uncategorizedTotal > 0) {
+      topCategories.push({ name: 'Sem categoria', icon: '❔', total: uncategorizedTotal });
+    }
+    topCategories = topCategories.sort((a, b) => Number(b.total) - Number(a.total)).slice(0, 3);
+
+    // Gastos diários (despesas + contas pagas)
     const dailyResult = await db.query(
-      `SELECT date(date) as day, COALESCE(SUM(amount), 0) as total
-       FROM expenses WHERE user_id = $1 AND date(date) BETWEEN date($2) AND date($3)
-       GROUP BY day ORDER BY day ASC`,
+      `SELECT day, SUM(total) as total FROM (
+         SELECT date(e.date) as day, COALESCE(SUM(e.amount), 0) as total
+         FROM expenses e
+         WHERE e.user_id = $1 AND date(e.date) BETWEEN date($2) AND date($3)
+         GROUP BY date(e.date)
+         UNION ALL
+         SELECT date(b.paid_date) as day, COALESCE(SUM(b.amount), 0) as total
+         FROM bills b
+         WHERE b.user_id = $1 AND b.status = 'paid' AND b.paid_date IS NOT NULL AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%') AND date(b.paid_date) BETWEEN date($2) AND date($3)
+         GROUP BY date(b.paid_date)
+       ) t
+       GROUP BY day
+       ORDER BY day ASC`,
       [user.userId, from.toISOString(), to.toISOString()]
     );
     const daily = dailyResult.rows;

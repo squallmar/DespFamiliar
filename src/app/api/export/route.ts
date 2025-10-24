@@ -42,15 +42,48 @@ export async function GET(request: NextRequest) {
       { from: new Date(fromParam), to: new Date(toParam) } : 
       getMonthRange();
 
+    // Get expenses
     const expensesResult = await db.query(
-      `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+      `SELECT e.id, e.date, e.amount, e.description, e.category_id, c.name as category_name, c.color as category_color, c.icon as category_icon,
+        e.recurring, e.recurring_type, e.tags, NULL as status, NULL as due_date, NULL as paid_date, 'expense' as source
        FROM expenses e
        LEFT JOIN categories c ON e.category_id = c.id
        WHERE e.user_id = $1 AND date(e.date) >= date($2) AND date(e.date) <= date($3)
        ORDER BY e.date ASC`,
       [user.userId, from.toISOString(), to.toISOString()]
     );
+    // Get bills
+    const billsResult = await db.query(
+      `SELECT b.id, b.due_date as date, b.amount, b.description, b.category_id, c.name as category_name, c.color as category_color, c.icon as category_icon,
+        b.recurring, b.recurring_type, b.notes as tags, b.status, b.due_date, b.paid_date, 'bill' as source
+       FROM bills b
+       LEFT JOIN categories c ON b.category_id = c.id
+       WHERE b.user_id = $1 AND date(b.due_date) >= date($2) AND date(b.due_date) <= date($3)
+       ORDER BY b.due_date ASC`,
+      [user.userId, from.toISOString(), to.toISOString()]
+    );
+    // Remove bills with tags 'orig:expense:' if matching expense exists
     const expenses = expensesResult.rows;
+    const bills = billsResult.rows;
+    const expenseKeys = new Set(expenses.map(e => `${e.description}|${e.amount}|${e.date}`));
+    const filteredBills = bills.filter(bill => {
+      if (bill.tags && String(bill.tags).startsWith('orig:expense:')) {
+        const key = `${bill.description}|${bill.amount}|${bill.date}`;
+        return !expenseKeys.has(key);
+      }
+      return true;
+    });
+    // Merge and deduplicate (by description, amount, date, source)
+    const allRows = [...expenses, ...filteredBills];
+    const dedupedRows = [];
+    const seen = new Set();
+    for (const row of allRows) {
+      const key = `${row.description}|${row.amount}|${row.date}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        dedupedRows.push(row);
+      }
+    }
 
     // === PDF Export ===
     if (type === 'pdf') {
@@ -83,7 +116,7 @@ export async function GET(request: NextRequest) {
       y -= 30;
 
       // Cabeçalho da tabela
-      const headers = ['Data', 'Valor', 'Descrição', 'Categoria', 'Recorrente', 'Tags'];
+  const headers = ['Data', 'Valor', 'Descrição', 'Categoria', 'Recorrente'];
       let x = 50;
       headers.forEach((header, idx) => {
         page.drawText(header, {
@@ -91,14 +124,14 @@ export async function GET(request: NextRequest) {
           y,
           size: fontSizeTable,
           font,
-          color: rgb(0.1, 0.1, 0.1),
+          color: rgb(0.2, 0.2, 0.6),
         });
-        x += [70, 60, 150, 90, 60, 100][idx] || 60;
+        x += [70, 80, 160, 100, 70, 110][idx] || 70;
       });
-      y -= 20;
+      y -= 24;
 
-      if (expenses.length === 0) {
-        page.drawText('Nenhuma despesa encontrada para o período.', {
+      if (dedupedRows.length === 0) {
+        page.drawText('Nenhuma despesa/conta encontrada para o período.', {
           x: 50,
           y,
           size: fontSizeTable,
@@ -106,28 +139,35 @@ export async function GET(request: NextRequest) {
           color: rgb(0.5, 0, 0),
         });
       } else {
-        for (const e of expenses) {
+        let rowIndex = 0;
+        for (const e of dedupedRows) {
           x = 50;
+          if (rowIndex % 2 === 1) {
+            page.drawRectangle({ x: 50, y: y - 2, width: 590, height: 22, color: rgb(0.97, 0.97, 0.85) });
+          }
           const row = [
             formatDate(e.date),
             formatCurrency(Number(e.amount)),
             String(e.description),
             String(e.category_name ?? ''),
-            e.recurring ? 'Sim' : 'Não',
-            String(e.tags ?? ''),
+            e.recurring ? 'Sim' : 'Não'
           ];
           row.forEach((cell, idx) => {
-            page.drawText(cell, {
+            let text = cell;
+            const maxLen = [20, 14, 38, 22, 10][idx] || 20;
+            if (text.length > maxLen) text = text.slice(0, maxLen - 3) + '...';
+            page.drawText(text, {
               x,
               y,
               size: fontSizeTable,
               font,
-              color: rgb(0, 0, 0),
-              maxWidth: [70, 60, 150, 90, 60, 100][idx] || 60,
+              color: rgb(0.1, 0.1, 0.1),
+              maxWidth: [70, 80, 160, 100, 70][idx] || 70,
             });
-            x += [70, 60, 150, 90, 60, 100][idx] || 60;
+            x += [70, 80, 160, 100, 70][idx] || 70;
           });
-          y -= 18;
+          y -= 24;
+          rowIndex++;
           if (y < 60) {
             y = 800;
             page = pdfDoc.addPage([595.28, 841.89]);
@@ -148,15 +188,13 @@ export async function GET(request: NextRequest) {
 
     // === Excel Export ===
     if (['excel', 'xlsx'].includes(type)) {
-      const excelData = (expenses as Expense[]).map((e) => ({
+      const excelData = dedupedRows.map((e, idx) => ({
         Data: new Date(e.date).toLocaleDateString('pt-BR'),
-        Valor: e.amount,
-        Descrição: e.description,
-        Categoria: e.category_name,
-        Ícone: e.category_icon,
+        Valor: typeof e.amount === 'number' ? formatCurrency(e.amount) : e.amount,
+        Descrição: String(e.description).length > 38 ? String(e.description).slice(0, 35) + '...' : String(e.description),
+        Categoria: String(e.category_name ?? '').length > 22 ? String(e.category_name).slice(0, 19) + '...' : String(e.category_name ?? ''),
         Recorrente: e.recurring ? 'Sim' : 'Não',
-        TipoRecorrência: e.recurring_type ?? '',
-        Tags: e.tags ?? ''
+        Linha: idx + 1
       }));
 
       const ws = XLSX.utils.json_to_sheet(excelData);
@@ -175,18 +213,25 @@ export async function GET(request: NextRequest) {
     }
 
     // === CSV Export ===
-    const headers = ['id','date','amount','description','categoryId','categoryName','categoryIcon','recurring','recurringType','tags'];
+  const headers = ['Linha','id','date','amount','description','categoryId','categoryName','categoryIcon','recurring','recurringType'];
     const escape = (v: unknown) => {
       if (v == null) return '';
       const s = String(v);
       return s.includes('"') || s.includes(',') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const rows = [headers.join(',')];
-    for (const e of expenses) {
+  for (const e of dedupedRows) {
       rows.push([
-        e.id, formatDate(e.date), formatCurrency(Number(e.amount)), e.description,
-        e.category_id, e.category_name ?? '', e.category_icon ?? '',
-        e.recurring ? '1' : '0', e.recurring_type ?? '', e.tags ?? ''
+        dedupedRows.indexOf(e) + 1,
+        e.id,
+        formatDate(e.date),
+        typeof e.amount === 'number' ? formatCurrency(e.amount) : e.amount,
+        String(e.description).length > 38 ? String(e.description).slice(0, 35) + '...' : String(e.description),
+        e.category_id,
+        String(e.category_name ?? '').length > 22 ? String(e.category_name).slice(0, 19) + '...' : String(e.category_name ?? ''),
+        e.category_icon ?? '',
+        e.recurring ? '1' : '0',
+        e.recurring_type ?? ''
       ].map(escape).join(','));
     }
 

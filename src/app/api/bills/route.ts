@@ -100,15 +100,28 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verificar se a conta pertence ao usuário
-    const checkResult = await db.query('SELECT id FROM bills WHERE id = $1 AND user_id = $2', [id, user.userId]);
+    const checkResult = await db.query('SELECT * FROM bills WHERE id = $1 AND user_id = $2', [id, user.userId]);
     if (checkResult.rows.length === 0) {
       return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 });
     }
 
+    const existing = checkResult.rows[0];
+
+    // Use valores do body ou mantenha os valores existentes
+    const finalDescription = description !== undefined ? description : existing.description;
+    const finalAmount = amount !== undefined ? amount : existing.amount;
+    const finalDueDate = dueDate !== undefined ? dueDate : existing.due_date;
+    const finalCategoryId = categoryId !== undefined ? categoryId : existing.category_id;
+    const finalStatus = status !== undefined ? status : existing.status;
+    const finalPaidDate = paidDate !== undefined ? paidDate : existing.paid_date;
+    const finalRecurring = recurring !== undefined ? recurring : existing.recurring;
+    const finalRecurringType = recurringType !== undefined ? recurringType : existing.recurring_type;
+    const finalNotes = notes !== undefined ? notes : existing.notes;
+
     await db.query(
       `UPDATE bills SET description = $1, amount = $2, due_date = $3, category_id = $4, status = $5, paid_date = $6, recurring = $7, recurring_type = $8, notes = $9
        WHERE id = $10 AND user_id = $11`,
-      [description, amount, dueDate, categoryId || null, status, paidDate || null, recurring || false, recurringType || null, notes || null, id, user.userId]
+      [finalDescription, finalAmount, finalDueDate, finalCategoryId || null, finalStatus, finalPaidDate || null, finalRecurring || false, finalRecurringType || null, finalNotes || null, id, user.userId]
     );
 
     const result = await db.query(
@@ -125,7 +138,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
     console.error('Error updating bill:', error);
-    return NextResponse.json({ error: 'Failed to update bill' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update bill', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
 

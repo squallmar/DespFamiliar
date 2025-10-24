@@ -13,19 +13,21 @@ export async function GET(request: NextRequest) {
   if (!userDb?.premium) {
       return NextResponse.json({ error: 'Recurso disponível apenas para usuários premium.' }, { status: 403 });
     }
-    const [categoriesRes, expensesRes, budgetsRes, goalsRes, achievementsRes] = await Promise.all([
+    const [categoriesRes, expensesRes, budgetsRes, goalsRes, achievementsRes, billsRes] = await Promise.all([
       db.query('SELECT * FROM categories WHERE user_id = $1', [user.userId]),
       db.query('SELECT * FROM expenses WHERE user_id = $1', [user.userId]),
       db.query('SELECT * FROM budgets WHERE user_id = $1', [user.userId]),
       db.query('SELECT * FROM financial_goals WHERE user_id = $1', [user.userId]),
       db.query('SELECT * FROM achievements WHERE user_id = $1', [user.userId]),
+      db.query('SELECT * FROM bills WHERE user_id = $1', [user.userId]),
     ]);
     return NextResponse.json({
       categories: categoriesRes.rows,
       expenses: expensesRes.rows,
       budgets: budgetsRes.rows,
       goals: goalsRes.rows,
-      achievements: achievementsRes.rows
+      achievements: achievementsRes.rows,
+      bills: billsRes.rows,
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
     }
     const data = await request.json();
     // Remove todos os dados antigos do usuário
+  await db.query('DELETE FROM bills WHERE user_id = $1', [user.userId]);
   await db.query('DELETE FROM categories WHERE user_id = $1', [user.userId]);
   await db.query('DELETE FROM expenses WHERE user_id = $1', [user.userId]);
   await db.query('DELETE FROM budgets WHERE user_id = $1', [user.userId]);
@@ -69,6 +72,12 @@ export async function POST(request: NextRequest) {
     }
     for (const a of data.achievements || []) {
       await db.query('INSERT INTO achievements (id, user_id, type, description, awarded_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING', [a.id, user.userId, a.type, a.description, a.awarded_at]);
+    }
+    for (const b of data.bills || []) {
+      await db.query(
+        'INSERT INTO bills (id, user_id, description, amount, due_date, category_id, status, paid_date, recurring, recurring_type, notes, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT (id) DO NOTHING',
+        [b.id, user.userId, b.description, b.amount, b.due_date, b.category_id, b.status, b.paid_date, b.recurring, b.recurring_type, b.notes, b.created_at]
+      );
     }
     return NextResponse.json({ success: true });
   } catch (error) {

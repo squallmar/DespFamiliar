@@ -1,4 +1,6 @@
-'use client';
+ "use client";
+import { PiggyBank } from 'lucide-react';
+
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -43,6 +45,10 @@ interface Category {
 }
 
 export default function BillsPage() {
+
+  // --- Lógica dos proventos (deve vir após period, totalPending, totalPaid, totalOverdue) ---
+  // Esta lógica deve ser inserida após a declaração dos totais, mais abaixo no componente.
+
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { currency, language } = useLocation();
@@ -98,8 +104,8 @@ export default function BillsPage() {
       const response = await fetch('/api/categories');
       if (response.ok) {
         const data = await response.json();
-        // Garantir que data seja um array
-        setCategories(Array.isArray(data) ? data : []);
+        // O endpoint retorna { categories: [...] }
+        setCategories(Array.isArray(data.categories) ? data.categories : []);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -219,7 +225,7 @@ export default function BillsPage() {
           categoryId: expenseCategoryId,
           recurring: !!expense.recurring,
           recurringType: expenseRecurringType,
-          notes: undefined
+          notes: `orig:expense:${expense.id}`
         })
       });
       if (!createRes.ok) throw new Error('Falha ao criar conta para marcar pagamento');
@@ -268,7 +274,7 @@ export default function BillsPage() {
           categoryId,
           recurring: !!expense.recurring,
           recurringType,
-          notes: undefined
+          notes: `orig:expense:${expense.id}`
         })
       });
       if (!res.ok) throw new Error('Falha ao converter despesa em conta');
@@ -380,10 +386,18 @@ export default function BillsPage() {
     bill.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bill.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  const filteredExpenses = futureExpenses.filter(exp => 
-    exp.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    exp.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Exclude future expenses that have already been converted to bills
+  const convertedExpenseIds = new Set(
+    bills
+      .filter(bill => bill.notes && bill.notes.startsWith('orig:expense:'))
+      .map(bill => bill.notes?.replace('orig:expense:', ''))
   );
+  const filteredExpenses = futureExpenses
+    .filter(exp => !convertedExpenseIds.has(String(exp.id)))
+    .filter(exp => 
+      exp.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exp.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   type CombinedRow = (Bill & { _type: 'bill' }) | (Expense & { _type: 'expense' });
   const isBill = (row: CombinedRow): row is Bill & { _type: 'bill' } => row._type === 'bill';
   const isExpense = (row: CombinedRow): row is Expense & { _type: 'expense' } => row._type === 'expense';
@@ -425,6 +439,29 @@ export default function BillsPage() {
   const totalPaid = totals.paid;
   const totalOverdue = totals.overdue;
 
+  // --- Lógica dos proventos ---
+  function getProventosKey(month: number, year: number) {
+    return `proventos_${year}_${month}`;
+  }
+  const [proventos, setProventos] = useState<number>(0);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem(getProventosKey(period.month, period.year));
+      setProventos(saved ? Number(saved) : 0);
+    }
+  }, [period.month, period.year]);
+  const handleProventosChange = (val: number) => {
+    setProventos(val);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(getProventosKey(period.month, period.year), String(val));
+    }
+  };
+  // Saldo = proventos - total do mês
+  const totalMes = totalPending + totalPaid + totalOverdue;
+  const saldo = proventos - totalMes;
+  const saldoNegativo = saldo < 0;
+  const saldoAlerta = saldo < 500;
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -453,6 +490,42 @@ export default function BillsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Card de Proventos */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-emerald-500">
+                <PiggyBank className="text-white" size={28} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 mb-1">Proventos ({new Date(period.year, period.month-1).toLocaleString(language, { month: 'long', year: 'numeric' })})</h2>
+                <p className="text-gray-500 text-sm">Informe o total de proventos (salário, renda, etc) para o mês selecionado.</p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2 min-w-[220px]">
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className="border border-gray-300 rounded px-4 py-2 text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 w-full md:w-48 text-right"
+                value={proventos}
+                onChange={e => handleProventosChange(Number(e.target.value))}
+                placeholder="0,00"
+                aria-label="Proventos"
+              />
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-gray-600 text-sm">Saldo:</span>
+                <span className={`text-lg font-bold ${saldoNegativo ? 'text-red-600' : 'text-green-700'}`}>{formatCurrency(saldo)}</span>
+              </div>
+              {saldoAlerta && (
+                <div className="mt-2 bg-red-100 border border-red-300 text-red-700 rounded px-3 py-2 text-sm font-semibold flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>Você está gastando demais! Não pode gastar mais este mês. Saldo {formatCurrency(saldo)} será prejudicado seu orçamento.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">💳 Contas a Pagar</h1>
           <button

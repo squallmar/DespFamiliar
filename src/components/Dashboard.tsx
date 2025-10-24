@@ -342,8 +342,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-  {/* Adicionar Despesa Rápida */}
-  <QuickAddExpense onAddExpense={handleAddExpense} categories={categories} loading={categoriesLoading} />
 
         {conquistasPanel}
         {/* Painel de Alertas */}

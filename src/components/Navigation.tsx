@@ -105,13 +105,8 @@ export default function Navigation() {
                 href="/reports"
                 className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
               >
+                <BarChart3 className="mr-2 h-4 w-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">{t.reports}</span>
-              </Link>
-              <Link
-                href="/bills"
-                className="text-gray-500 hover:text-gray-900 inline-flex items-center px-2 pt-1 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium max-w-[180px] whitespace-nowrap cursor-pointer"
-              >
-                <span className="whitespace-nowrap">💳 Contas</span>
               </Link>
               {/* ADMIN badge destacado */}
               {/* ...existing code... */}
