@@ -4,11 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import translations from '@/lib/translations';
 import { useLocation } from '@/contexts/LocationContext';
 import { Trash2, X, Check, Database } from 'lucide-react';
-  const [showFormatModal, setShowFormatModal] = useState(false);
-  const [formatConfirm, setFormatConfirm] = useState('');
-  const [formatting, setFormatting] = useState(false);
-  const [formatResult, setFormatResult] = useState<string|null>(null);
-
+ 
 interface User {
   id: string;
   name: string;
