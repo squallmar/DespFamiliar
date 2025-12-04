@@ -4,7 +4,10 @@ import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+const stripe = new Stripe(STRIPE_SECRET_KEY, {
+  apiVersion: '2025-09-30.clover',
+});
+
 
 export async function POST(request: NextRequest) {
   try {
