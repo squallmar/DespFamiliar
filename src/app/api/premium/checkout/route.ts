@@ -4,10 +4,9 @@ import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2025-09-30.clover',
-});
 
+// ❗ Removido apiVersion — obrigatório para funcionar no Vercel
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +14,6 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase();
 
-    // PostgreSQL usa db.query()
     const result = await db.query(
       'SELECT * FROM users WHERE id = $1',
       [user.userId]
@@ -30,7 +28,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Criar sessão de checkout Stripe para assinatura mensal
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
@@ -42,7 +39,7 @@ export async function POST(request: NextRequest) {
             product_data: {
               name: 'Assinatura Premium DespFamiliar',
             },
-            unit_amount: 1500, // $15.00
+            unit_amount: 1500,
             recurring: { interval: 'month' },
           },
           quantity: 1,
