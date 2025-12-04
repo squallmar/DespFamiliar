@@ -6,15 +6,53 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: NextRequest) {
   try {
     const { token, password } = await request.json();
-    if (!token || !password) return NextResponse.json({ error: 'Token e senha obrigatórios' }, { status: 400 });
+
+    if (!token || !password) {
+      return NextResponse.json(
+        { error: 'Token e senha obrigatórios' },
+        { status: 400 }
+      );
+    }
+
     const db = await getDatabase();
-    const reset = await db.get('SELECT * FROM password_resets WHERE token = ? AND expires_at > ?', [token, Date.now()]);
-    if (!reset) return NextResponse.json({ error: 'Token inválido ou expirado' }, { status: 400 });
+
+    // PostgreSQL usa db.query e parâmetros $1
+    const resetQuery = await db.query(
+      'SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW()',
+      [token]
+    );
+
+    const reset = resetQuery.rows[0];
+
+    if (!reset) {
+      return NextResponse.json(
+        { error: 'Token inválido ou expirado' },
+        { status: 400 }
+      );
+    }
+
+    // Criptografa a nova senha
     const hashed = await bcrypt.hash(password, 10);
-    await db.run('UPDATE users SET password = ? WHERE id = ?', [hashed, reset.user_id]);
-    await db.run('DELETE FROM password_resets WHERE user_id = ?', [reset.user_id]);
+
+    // Atualiza senha na tabela users
+    await db.query(
+      'UPDATE users SET password = $1 WHERE id = $2',
+      [hashed, reset.user_id]
+    );
+
+    // Remove o token da tabela password_resets
+    await db.query(
+      'DELETE FROM password_resets WHERE user_id = $1',
+      [reset.user_id]
+    );
+
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: 'Erro ao redefinir senha' }, { status: 500 });
+
+  } catch (error) {
+    console.error('Erro no reset:', error);
+    return NextResponse.json(
+      { error: 'Erro ao redefinir senha' },
+      { status: 500 }
+    );
   }
 }

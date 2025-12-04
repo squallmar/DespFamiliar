@@ -6,16 +6,46 @@ import { sendResetEmail } from '@/lib/mailer';
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
-    if (!email) return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 });
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 });
+    }
+
     const db = await getDatabase();
-    const user = await db.get('SELECT id FROM users WHERE email = ?', [email]);
-    if (!user) return NextResponse.json({ ok: true }); // Não revela se existe
-    const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    const expires = Date.now() + 1000 * 60 * 30; // 30 minutos
-    await db.run('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)', [user.id, token, expires]);
+
+    // PostgreSQL usa db.query()
+    const userResult = await db.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
+    );
+
+    const user = userResult.rows[0];
+
+    // Não revela se o usuário existe
+    if (!user) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const token =
+      Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+    const expires = new Date(Date.now() + 1000 * 60 * 30); // 30 min — formato correto para Postgres
+
+    // Insere token de reset
+    await db.query(
+      'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, token, expires]
+    );
+
     await sendResetEmail(email, token);
+
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: 'Erro ao solicitar reset' }, { status: 500 });
+
+  } catch (error) {
+    console.error('Erro ao solicitar reset:', error);
+    return NextResponse.json(
+      { error: 'Erro ao solicitar reset' },
+      { status: 500 }
+    );
   }
 }

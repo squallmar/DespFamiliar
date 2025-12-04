@@ -9,7 +9,6 @@ interface ImportedItem {
   amount: number;
 }
 
-// POST: Importa extrato bancário CSV simples e cria despesas
 export async function POST(request: NextRequest) {
   try {
     const user = requireAuth(request);
@@ -17,10 +16,10 @@ export async function POST(request: NextRequest) {
     const text = await request.text();
 
     // Espera CSV: data,descricao,valor
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
     const imported: ImportedItem[] = [];
 
-    for (const line of lines.slice(1)) { // pula cabeçalho
+    for (const line of lines.slice(1)) {
       const [date, description, amountStr] = line.split(',');
       if (!date || !description || !amountStr) continue;
 
@@ -28,15 +27,26 @@ export async function POST(request: NextRequest) {
       if (isNaN(amountNum)) continue;
 
       const expenseId = uuidv4();
-      await db.run(
-        'INSERT INTO expenses (id, amount, description, category_id, date, user_id) VALUES (?, ?, ?, ?, ?, ?)',
-        [expenseId, amountNum, description, null, new Date(date).toISOString(), user.userId]
+
+      // PostgreSQL usa $1, $2, ...
+      await db.query(
+        `INSERT INTO expenses 
+          (id, amount, description, category_id, date, user_id) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          expenseId,
+          amountNum,
+          description,
+          null, // category_id
+          new Date(date).toISOString(),
+          user.userId
+        ]
       );
 
       imported.push({
         date,
         description,
-        amount: amountNum
+        amount: amountNum,
       });
     }
 
@@ -47,6 +57,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
     console.error('Erro ao importar extrato:', error);
-    return NextResponse.json({ error: 'Falha ao importar extrato' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Falha ao importar extrato' },
+      { status: 500 }
+    );
   }
 }

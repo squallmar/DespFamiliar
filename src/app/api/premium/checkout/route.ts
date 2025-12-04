@@ -4,18 +4,30 @@ import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
 export async function POST(request: NextRequest) {
   try {
     const user = requireAuth(request);
+
     const db = await getDatabase();
-    const dbUser = await db.get('SELECT * FROM users WHERE id = ?', [user.userId]);
+
+    // PostgreSQL usa db.query()
+    const result = await db.query(
+      'SELECT * FROM users WHERE id = $1',
+      [user.userId]
+    );
+
+    const dbUser = result.rows[0];
+
     if (!dbUser) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 404 }
+      );
     }
-    // Cria sessão de checkout Stripe para assinatura de $15 dólares
+
+    // Criar sessão de checkout Stripe para assinatura mensal
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
@@ -27,7 +39,7 @@ export async function POST(request: NextRequest) {
             product_data: {
               name: 'Assinatura Premium DespFamiliar',
             },
-            unit_amount: 1500, // $15.00 em centavos
+            unit_amount: 1500, // $15.00
             recurring: { interval: 'month' },
           },
           quantity: 1,
@@ -39,9 +51,14 @@ export async function POST(request: NextRequest) {
         userId: dbUser.id,
       },
     });
+
     return NextResponse.json({ url: session.url });
+
   } catch (error) {
     console.error('Erro ao criar checkout Stripe:', error);
-    return NextResponse.json({ error: 'Falha ao criar checkout' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Falha ao criar checkout' },
+      { status: 500 }
+    );
   }
 }
