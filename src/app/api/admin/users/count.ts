@@ -4,14 +4,27 @@ import { requireAuth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth(request);
-    if (!('admin' in user) || !user.admin) {
+    const user = requireAuth(request);
+
+    // Verifica permissão
+    if (!user || !user.admin) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
+
     const db = await getDatabase();
-    const result = await db.get('SELECT COUNT(*) as total FROM users');
-    return NextResponse.json({ total: result?.total ?? 0 });
-  } catch {
-    return NextResponse.json({ error: 'Erro ao contar usuários' }, { status: 500 });
+
+    // PostgreSQL usa db.query()
+    const result = await db.query('SELECT COUNT(*) AS total FROM users');
+
+    // PostgreSQL retorna em result.rows
+    const total = Number(result.rows[0]?.total ?? 0);
+
+    return NextResponse.json({ total });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: 'Erro ao contar usuários' },
+      { status: 500 }
+    );
   }
 }
