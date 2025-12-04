@@ -74,21 +74,25 @@ function ProjectionCard({ title, amount, change, icon: Icon, color }: Projection
 }
 
 export default function FinancialProjections() {
+  // Time range state must be declared first since it's used in other hooks
+  const [timeRange, setTimeRange] = useState('6months');
+  
   // Estado de proventos (input do usuário, persiste por período)
   const [proventos, setProventos] = useState<number>(0);
+  
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = window.localStorage.getItem(getProventosKey(timeRange));
       setProventos(saved ? Number(saved) : 0);
     }
   }, [timeRange]);
+  
   const handleProventosChange = (val: number) => {
     setProventos(val);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(getProventosKey(timeRange), String(val));
     }
   };
-  const [timeRange, setTimeRange] = useState('6months');
   const { language, currency } = useLocation();
   const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
   const categoriesMap = useMemo(() => (t?.categories ?? {}) as Record<string, string>, [t]);
@@ -184,6 +188,10 @@ export default function FinancialProjections() {
   const saldo = proventos - projectedSpendingAmount;
   const saldoNegativo = saldo < 0;
   const saldoAlerta = saldo < 500;
+
+  // Balance calculations (deficit/surplus)
+  const balanceAmount = saldo;
+  const balanceChange = baselineTotal > 0 ? (saldo / baselineTotal) * 100 : 0;
 
   const periodLabel = timeRange === '3months' ? t.next3 : timeRange === '6months' ? t.next6 : t.next12;
   const projectedTitle = `${(t.projectedSpending?.split('(')?.[0] || 'Gastos Projetados').trim()} (${periodLabel})`;

@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import translations from '@/lib/translations';
 import { useLocation } from '@/contexts/LocationContext';
 import { Trash2, X, Check, Database } from 'lucide-react';
- 
+
+
 interface User {
   id: string;
   name: string;
