@@ -3,9 +3,8 @@ import Stripe from 'stripe';
 import { getDatabase } from '@/lib/database';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
+const stripe = new Stripe(STRIPE_SECRET_KEY);
+
 
 // Stripe webhook endpoint
 export async function POST(request: NextRequest) {
