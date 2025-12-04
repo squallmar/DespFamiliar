@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const { email, admin } = await request.json();
 
-    // Segurança: requireAuth pode lançar erro → protegemos com try/catch interno
+    // Segurança
     let user;
     try {
       user = requireAuth(request);
@@ -15,21 +15,26 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDatabase();
-    const me = await db.get(
-      'SELECT admin FROM users WHERE id = ?',
+
+    // Busca quem está fazendo a requisição (se é admin)
+    const meResult = await db.query(
+      'SELECT admin FROM users WHERE id = $1',
       [user.userId]
     );
+
+    const me = meResult.rows[0];
 
     if (!me || !me.admin) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    const result = await db.run(
-      'UPDATE users SET admin = ? WHERE email = ?',
-      [admin ? 1 : 0, email]
+    // Atualiza o status admin do usuário-alvo
+    const updateResult = await db.query(
+      'UPDATE users SET admin = $1 WHERE email = $2 RETURNING id',
+      [admin ? true : false, email]
     );
 
-    if (result.changes === 0) {
+    if (updateResult.rowCount === 0) {
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
         { status: 404 }
