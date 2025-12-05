@@ -3,10 +3,14 @@ import Stripe from 'stripe';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+// Garante erro claro se variável faltar
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error("❌ STRIPE_SECRET_KEY não configurada no ambiente!");
+}
 
-// ❗ Removido apiVersion — obrigatório para funcionar no Vercel
-const stripe = new Stripe(STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
 
 export async function POST(request: NextRequest) {
   try {
