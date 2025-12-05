@@ -8,7 +8,7 @@ import { useTranslation } from '@/lib/translations';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import PaywallModal from '@/components/PaywallModal';
-import type { ReportsResponse, BudgetAlert, SpikeAlert } from '@/types';
+import type { ReportsResponse, AlertItem } from '@/types';
 import {
   PieChart,
   Pie,
@@ -33,7 +33,7 @@ type SummaryResponse = {
   total: number;
   topCategories: { name: string; icon: string; total: number }[];
   daily: { day: string; total: number }[];
-  alerts: (BudgetAlert | SpikeAlert)[];
+  alerts: AlertItem[];
 };
 
 // ...existing code...
@@ -337,24 +337,52 @@ export default function ReportsPage() {
                     <div className="font-semibold text-yellow-700 mb-1">{t('alertsSection')}</div>
                     <ul className="text-sm text-gray-700 space-y-1">
                       {summary.alerts.length === 0 && <li>{t('noAlerts')}</li>}
+
                       {/* Remove duplicate bill alerts by unique key */}
                       {(() => {
                         const seen = new Set();
-                        return summary.alerts.filter(alert => {
-                          if (alert.type !== 'bill') return true;
-                          const key = `${alert.description}|${alert.amount}|${alert.dueDate}|${alert.status}`;
-                          if (seen.has(key)) return false;
-                          seen.add(key);
-                          return true;
-                        }).map((alert, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            {alert.type === 'budget' && <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: alert.color }}></span>}
-                            <span>{alert.type === 'budget' ? `${alert.categoryName}: ${Math.round(alert.usage*100)}% ${t('budgetUsage')} (${formatCurrency(alert.spent)} / ${formatCurrency(alert.budget)})` : alert.message}</span>
-                          </li>
-                        ));
+
+                        return summary.alerts
+                          .filter(alert => {
+                            if (alert.type !== 'bill') return true;
+                            const key = `${alert.description}|${alert.amount}|${alert.dueDate}|${alert.level}`;
+                            if (seen.has(key)) return false;
+                            seen.add(key);
+                            return true;
+                          })
+                          .map((alert, i) => (
+                            <li key={i} className="flex items-center gap-2">
+
+                              {/* Indicador de cor para alertas de orçamento */}
+                              {alert.type === 'budget' && (
+                                <span
+                                  className="inline-block w-3 h-3 rounded"
+                                  style={{ backgroundColor: alert.color }}
+                                ></span>
+                              )}
+
+                              <span>
+                                {/* 🔵 Alertas de orçamento (budget) */}
+                                {alert.type === 'budget' &&
+                                  `${alert.categoryName}: ${Math.round(alert.usage * 100)}% ${t('budgetUsage')}
+                                  (${formatCurrency(alert.spent)} / ${formatCurrency(alert.budget)})`
+                                }
+
+                                {/* 🟣 Alertas de gasto incomum (spike) */}
+                                {alert.type === 'spike' && alert.message}
+
+                                {/* 🟡 Alertas de contas (bill) */}
+                                {alert.type === 'bill' &&
+                                  `${alert.description} — ${formatCurrency(alert.amount)}
+                                  — ${t('due')}: ${formatDate(alert.dueDate)}`
+                                }
+                              </span>
+                            </li>
+                          ));
                       })()}
                     </ul>
                   </div>
+
                 </div>
               )}
               {/* Conquistas exclusivas premium */}
