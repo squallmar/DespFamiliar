@@ -6,7 +6,8 @@ let pool: Pool | null = null;
 export async function getDatabase() {
   if (!pool) {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/despfamiliar'
+      connectionString: process.env.DATABASE_URL 
+        || 'postgres://postgres:mM202038@@localhost:5432/despfamiliar'
     });
 
     // Create tables if they don't exist (run only once)
@@ -19,6 +20,7 @@ export async function getDatabase() {
     await pool.query('CREATE TABLE IF NOT EXISTS financial_goals (id TEXT PRIMARY KEY, name TEXT NOT NULL, target_amount REAL NOT NULL, current_amount REAL DEFAULT 0, deadline TIMESTAMP NOT NULL, user_id TEXT NOT NULL, completed BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id))');
     await pool.query('CREATE TABLE IF NOT EXISTS achievements (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, type TEXT NOT NULL, description TEXT NOT NULL, awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id))');
     await pool.query('CREATE TABLE IF NOT EXISTS bills (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, description TEXT NOT NULL, amount REAL NOT NULL, due_date TIMESTAMP NOT NULL, category_id TEXT, status TEXT DEFAULT \'pending\', paid_date TIMESTAMP, recurring BOOLEAN DEFAULT FALSE, recurring_type TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id), FOREIGN KEY (category_id) REFERENCES categories (id))');
+
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses (user_id, date)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses (category_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_budgets_user ON budgets (user_id)');
