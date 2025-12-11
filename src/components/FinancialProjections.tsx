@@ -75,7 +75,7 @@ function ProjectionCard({ title, amount, change, icon: Icon, color }: Projection
 
 export default function FinancialProjections() {
   // Time range state must be declared first since it's used in other hooks
-  const [timeRange, setTimeRange] = useState('6months');
+  const [timeRange, setTimeRange] = useState('1month');
   
   // Estado de proventos (input do usuário, persiste por período)
   const [proventos, setProventos] = useState<number>(0);
@@ -144,7 +144,7 @@ export default function FinancialProjections() {
     // Regression to forecast next N months
     const n = y.length;
     const { a, b } = linearRegression(y);
-    const count = timeRange === '3months' ? 3 : timeRange === '12months' ? 12 : 6;
+    const count = timeRange === '1month' ? 1 : timeRange === '3months' ? 3 : timeRange === '12months' ? 12 : 6;
     const lastYm = monthly.length ? monthly[monthly.length - 1].ym : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const future = Array.from({ length: count }, (_, i) => {
       const x = n + i;
@@ -193,7 +193,7 @@ export default function FinancialProjections() {
   const balanceAmount = saldo;
   const balanceChange = baselineTotal > 0 ? (saldo / baselineTotal) * 100 : 0;
 
-  const periodLabel = timeRange === '3months' ? t.next3 : timeRange === '6months' ? t.next6 : t.next12;
+  const periodLabel = timeRange === '1month' ? 'Próximo mês' : timeRange === '3months' ? t.next3 : timeRange === '6months' ? t.next6 : t.next12;
   const projectedTitle = `${(t.projectedSpending?.split('(')?.[0] || 'Gastos Projetados').trim()} (${periodLabel})`;
 
   if (loading) {
@@ -222,6 +222,7 @@ export default function FinancialProjections() {
             onChange={(e) => setTimeRange(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option value="1month">Próximo mês</option>
             <option value="3months">{t.next3}</option>
             <option value="6months">{t.next6}</option>
             <option value="12months">{t.next12}</option>
