@@ -169,11 +169,13 @@ export default function FinancialProjections() {
     const totals = reports.totalsByCategory.map(c => ({ ...c, totalNum: Number(c.total) }));
     const totalSum = totals.reduce((acc, c) => acc + c.totalNum, 0);
     if (totalSum <= 0) return [];
-    return totals.map(c => ({
-      name: categoriesMap[c.name] || c.name,
-      value: (c.totalNum / totalSum) * (sumProjectedPeriod || 0),
-      color: c.color,
-    }));
+    return totals
+      .map(c => ({
+        name: categoriesMap[c.name] || c.name,
+        value: (c.totalNum / totalSum) * (sumProjectedPeriod || 0),
+        color: c.color,
+      }))
+      .filter(c => c.value > 0); // Filtrar apenas categorias com valor > 0
   }, [reports, categoriesMap, sumProjectedPeriod]);
 
   // Cards computations
@@ -340,7 +342,7 @@ export default function FinancialProjections() {
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent }: { name?: string; percent?: number }) => 
-                    `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
+                    percent && percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''
                   }
                   outerRadius={80}
                   fill="#8884d8"
