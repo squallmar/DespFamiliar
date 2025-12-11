@@ -698,9 +698,12 @@ export default function BillsPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {isBill(row) ? (
-                          row.status === 'paid' && row.paid_date
-                            ? `Pagamento: ${formatDate(row.paid_date)}`
-                            : formatDate(row.due_date)
+                          <>
+                            <div>{formatDate(row.due_date)}</div>
+                            {row.status === 'paid' && row.paid_date && (
+                              <div className="text-xs text-gray-500">Pagamento: {formatDate(row.paid_date)}</div>
+                            )}
+                          </>
                         ) : (
                           formatDate(String(row.date))
                         )}
