@@ -697,7 +697,13 @@ export default function BillsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {isBill(row) ? formatDate(row.due_date) : formatDate(String(row.date))}
+                        {isBill(row) ? (
+                          row.status === 'paid' && row.paid_date
+                            ? `Pagamento: ${formatDate(row.paid_date)}`
+                            : formatDate(row.due_date)
+                        ) : (
+                          formatDate(String(row.date))
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {isBill(row) ? getBillStatusBadge(row) : getExpenseStatusBadge(row)}
