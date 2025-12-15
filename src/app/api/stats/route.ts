@@ -27,6 +27,17 @@ export async function GET(request: NextRequest) {
     );
     const thisMonthTotal = thisMonthTotalResult.rows[0] || { total: 0 };
     const thisExpensesTotal = Number(thisMonthTotal.total || 0);
+    // buscar soma de bills por due_date no mês atual (para incluir nos totais)
+    const billsThisMonthResult = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) as total
+       FROM bills
+       WHERE user_id = $1
+         AND EXTRACT(YEAR FROM due_date::date) = $2
+         AND EXTRACT(MONTH FROM due_date::date) = $3`,
+      [user.userId, currentYear, currentMonth]
+    );
+    const billsThisMonth = Number(billsThisMonthResult.rows[0]?.total || 0);
+
     // incluir contas (bills) no total deste mês
     const thisTotal = thisExpensesTotal + billsThisMonth;
     
@@ -40,16 +51,7 @@ export async function GET(request: NextRequest) {
       [user.userId, currentYear, currentMonth]
     );
     const thisMonthNonRecurring = thisMonthNonRecurringResult.rows[0] || { total: 0 };
-    // Somar também contas (bills) com due_date no mês atual
-    const billsThisMonthResult = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) as total
-       FROM bills
-       WHERE user_id = $1
-         AND EXTRACT(YEAR FROM due_date::date) = $2
-         AND EXTRACT(MONTH FROM due_date::date) = $3`,
-      [user.userId, currentYear, currentMonth]
-    );
-    const billsThisMonth = Number(billsThisMonthResult.rows[0]?.total || 0);
+    
     
     const lastMonthTotalResult = await db.query(
       `SELECT COALESCE(SUM(amount), 0) as total
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
       [user.userId, lastMonthYear, lastMonth]
     );
     const lastMonthExpensesTotal = lastMonthTotalResult.rows[0] || { total: 0 };
-    const lastMonthTotal = Number(lastMonthExpensesTotal.total || 0) + billsLastMonth;
+    // buscar soma de bills do mês anterior
     const billsLastMonthResult = await db.query(
       `SELECT COALESCE(SUM(amount), 0) as total
        FROM bills
@@ -70,6 +72,7 @@ export async function GET(request: NextRequest) {
       [user.userId, lastMonthYear, lastMonth]
     );
     const billsLastMonth = Number(billsLastMonthResult.rows[0]?.total || 0);
+    const lastMonthTotal = Number(lastMonthExpensesTotal.total || 0) + billsLastMonth;
 
     const last3MonthsTotalsResult = await db.query(
       `SELECT COALESCE(SUM(amount), 0) as total
@@ -253,7 +256,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 10);
     const recentExpenses = mergedRecent;
     
-    const lastTotal = Number(lastMonthTotal.total || 0);
+    const lastTotal = Number(lastMonthTotal || 0);
     const percentageChange = lastTotal > 0 ? ((thisTotal - lastTotal) / lastTotal) * 100 : 0;
     
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();

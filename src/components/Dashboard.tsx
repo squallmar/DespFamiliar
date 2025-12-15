@@ -45,7 +45,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language }: QuickA
   const [submitting, setSubmitting] = useState(false);
   
   const langKey = resolveLanguage(language);
-  const t = translations[langKey as keyof TranslationsType] || translations['pt-BR'];
+  const t = (translations as Record<string, any>)[langKey] || translations['pt-BR'];
   const categoriesMap = (t?.categories ?? {}) as CategoryTranslation;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -202,7 +202,7 @@ function StatsCard({
 export default function Dashboard() {
   const { currency, language, loading: locationLoading } = useLocation();
   const langKey = resolveLanguage(language);
-  const t = translations[langKey as keyof TranslationsType] || translations['pt-BR'];
+  const t = (translations as Record<string, any>)[langKey] || translations['pt-BR'];
   const { categories, loading: categoriesLoading } = useCategories();
   const { createExpense } = useExpenses();
   
@@ -309,7 +309,7 @@ export default function Dashboard() {
         categoryId: string;
         date: Date;
         recurring?: boolean;
-        recurringType?: 'monthly' | 'weekly' | 'yearly' | 'daily';
+        recurringType?: 'monthly' | 'weekly' | 'yearly';
       } = {
         amount: expense.amount,
         description: expense.description,
@@ -321,7 +321,8 @@ export default function Dashboard() {
         payload.recurring = true;
         
         if (expense.recurrence === 'daily') {
-          payload.recurringType = 'daily';
+          // API does not support 'daily' recurringType; map to 'monthly' as a sensible default
+          payload.recurringType = 'monthly';
         } else if (expense.recurrence === 'weekly') {
           payload.recurringType = 'weekly';
         } else if (expense.recurrence === 'monthly') {
