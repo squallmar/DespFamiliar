@@ -303,6 +303,15 @@ export default function Dashboard() {
   };
   const categoriesMap = (translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.categories ?? {}) as Record<string, string>;
 
+  // Detectar quando não há dados relevantes para o período selecionado
+  const noStatsData =
+    stats.totalThisMonth === 0 &&
+    stats.totalLastMonth === 0 &&
+    stats.dailyAverage === 0 &&
+    stats.projectedMonthlyTotal === 0 &&
+    stats.topCategories.length === 0 &&
+    stats.recentExpenses.length === 0;
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
       <div className="max-w-7xl mx-auto">
@@ -385,94 +394,104 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatsCard
-            title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.thisMonthSpending || 'Gastos Este Mês'}
-            value={formatCurrency(stats.totalThisMonth)}
-            icon={TrendingUp}
-            trend={stats.percentageChange}
-            color="bg-blue-500"
-            t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
-          />
-          <StatsCard
-            title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.lastMonthSpending || 'Gastos Mês Anterior'}
-            value={formatCurrency(stats.totalLastMonth)}
-            icon={Calendar}
-            color="bg-gray-500"
-            t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
-          />
-          <StatsCard
-            title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.dailyAverage || 'Média Diária'}
-            value={formatCurrency(stats.dailyAverage)}
-            icon={Target}
-            color="bg-green-500"
-            t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
-          />
-          <StatsCard
-            title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.monthlyProjection || 'Projeção Mensal'}
-            value={formatCurrency(stats.projectedMonthlyTotal)}
-            icon={TrendingUp}
-            color="bg-purple-500"
-            t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
-          />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.byCategoryThisMonth || 'Despesas por Categoria (Este Mês)'}</h3>
-            <div className="space-y-4">
-              {stats.topCategories.map(category => (
-                <div key={category.categoryId} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="text-2xl mr-3">{category.icon}</span>
-                    <span className="font-medium">{(translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.categories as Record<string,string>)?.[category.name] || category.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">{formatCurrency(category.amount)}</div>
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full" 
-                        style={{ 
-                          backgroundColor: category.color, 
-                          width: `${category.percentage}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {stats.topCategories.length === 0 && (
-                <p className="text-gray-500 text-center py-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa registrada ainda'}</p>
-              )}
-            </div>
+        {noStatsData ? (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8 text-center">
+            <h3 className="text-lg font-semibold mb-2">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpensesTitle || 'Sem despesas neste período'}</h3>
+            <p className="text-gray-600 mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa registrada para o período selecionado.'}</p>
+            <QuickAddExpense onAddExpense={handleAddExpense} categories={categories} loading={categoriesLoading} />
           </div>
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.latestExpenses || 'Últimas Despesas'}</h3>
-            <div className="space-y-4">
-              {stats.recentExpenses.slice(0, 6).map((expense) => (
-                <div key={expense.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                  <div className="flex items-center">
-                    <span className="text-xl mr-3">{expense.category_icon}</span>
-                    <div>
-                      <span className="font-medium">{expense.description}</span>
-                      <div className="text-sm text-gray-500">{categoriesMap[expense.category_name || ''] || expense.category_name}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-semibold text-red-600">
-                      {formatCurrency(expense.amount)}
-                    </span>
-                    <div className="text-xs text-gray-500">
-                      {formatDate(expense.date)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {stats.recentExpenses.length === 0 && (
-                <p className="text-gray-500 text-center py-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa encontrada'}</p>
-              )}
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <StatsCard
+                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.thisMonthSpending || 'Gastos Este Mês'}
+                value={formatCurrency(stats.totalThisMonth)}
+                icon={TrendingUp}
+                trend={stats.percentageChange}
+                color="bg-blue-500"
+                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+              />
+              <StatsCard
+                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.lastMonthSpending || 'Gastos Mês Anterior'}
+                value={formatCurrency(stats.totalLastMonth)}
+                icon={Calendar}
+                color="bg-gray-500"
+                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+              />
+              <StatsCard
+                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.dailyAverage || 'Média Diária'}
+                value={formatCurrency(stats.dailyAverage)}
+                icon={Target}
+                color="bg-green-500"
+                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+              />
+              <StatsCard
+                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.monthlyProjection || 'Projeção Mensal'}
+                value={formatCurrency(stats.projectedMonthlyTotal)}
+                icon={TrendingUp}
+                color="bg-purple-500"
+                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+              />
             </div>
-          </div>
-        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-lg font-semibold mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.byCategoryThisMonth || 'Despesas por Categoria (Este Mês)'}</h3>
+                <div className="space-y-4">
+                  {stats.topCategories.map(category => (
+                    <div key={category.categoryId} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-2xl mr-3">{category.icon}</span>
+                        <span className="font-medium">{(translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.categories as Record<string,string>)?.[category.name] || category.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-600">{formatCurrency(category.amount)}</div>
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="h-2 rounded-full" 
+                            style={{ 
+                              backgroundColor: category.color, 
+                              width: `${category.percentage}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {stats.topCategories.length === 0 && (
+                    <p className="text-gray-500 text-center py-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa registrada ainda'}</p>
+                  )}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-lg font-semibold mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.latestExpenses || 'Últimas Despesas'}</h3>
+                <div className="space-y-4">
+                  {stats.recentExpenses.slice(0, 6).map((expense) => (
+                    <div key={expense.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div className="flex items-center">
+                        <span className="text-xl mr-3">{expense.category_icon}</span>
+                        <div>
+                          <span className="font-medium">{expense.description}</span>
+                          <div className="text-sm text-gray-500">{categoriesMap[expense.category_name || ''] || expense.category_name}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold text-red-600">
+                          {formatCurrency(expense.amount)}
+                        </span>
+                        <div className="text-xs text-gray-500">
+                          {formatDate(expense.date)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {stats.recentExpenses.length === 0 && (
+                    <p className="text-gray-500 text-center py-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa encontrada'}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

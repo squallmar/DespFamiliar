@@ -209,7 +209,19 @@ export function useStats(year?: number, month?: number) {
         throw new Error(data.error || 'Failed to fetch stats');
       }
       
-      setStats(data);
+      // Normalizar valores retornados pela API para evitar campos undefined/null
+      const defaults: StatsData = {
+        totalThisMonth: 0,
+        totalLastMonth: 0,
+        percentageChange: 0,
+        dailyAverage: 0,
+        projectedMonthlyTotal: 0,
+        categoryStats: [],
+        recentExpenses: [],
+        topCategories: []
+      };
+
+      setStats({ ...defaults, ...data });
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
