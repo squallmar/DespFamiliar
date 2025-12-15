@@ -135,6 +135,7 @@ const translations = {
     monthlyProjection: 'Projeção Mensal',
     byCategoryThisMonth: 'Despesas por Categoria (Este Mês)',
     latestExpenses: 'Últimas Despesas',
+    noExpensesTitle: 'Sem despesas neste período',
     noExpenses: 'Nenhuma despesa encontrada',
     vsLastMonth: 'vs mês anterior',
     // Reports page translations
@@ -317,6 +318,7 @@ const translations = {
     monthlyProjection: 'Monthly Projection',
     byCategoryThisMonth: 'Expenses by Category (This Month)',
     latestExpenses: 'Latest Expenses',
+    noExpensesTitle: 'No expenses in this period',
     noExpenses: 'No expenses found',
     vsLastMonth: 'vs last month',
     // Reports page translations
@@ -499,6 +501,7 @@ const translations = {
     monthlyProjection: 'Proyección Mensual',
     byCategoryThisMonth: 'Gastos por Categoría (Este Mes)',
     latestExpenses: 'Gastos Recientes',
+    noExpensesTitle: 'Sin gastos en este período',
     noExpenses: 'No se encontraron gastos',
     vsLastMonth: 'vs mes pasado',
     // Reports page translations
