@@ -6,7 +6,7 @@ import { BarChart3, Home, TrendingUp, LogOut, User, Trophy } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useLocation } from "../contexts/LocationContext";
-import translations from "../lib/translations";
+import translations, { resolveLanguage } from "../lib/translations";
 
 export default function Navigation() {
   const [adminOpen, setAdminOpen] = useState(false);
@@ -40,7 +40,8 @@ export default function Navigation() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { language, currency, setLanguage, setCurrency, loading } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
 
   const getFirstLast = (fullName?: string) => {
     if (!fullName) return '';

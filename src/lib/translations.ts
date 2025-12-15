@@ -571,3 +571,13 @@ export function useTranslation(language: string) {
 }
 
 export default translations;
+
+// Normalize language codes to the keys used in `translations`.
+export function resolveLanguage(lang?: string) {
+  if (!lang) return 'pt-BR';
+  const l = lang.toLowerCase();
+  if (l.startsWith('pt')) return 'pt-BR';
+  if (l.startsWith('es')) return 'es-ES';
+  if (l.startsWith('en')) return 'en-US';
+  return 'pt-BR';
+}

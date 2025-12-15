@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from '@/contexts/LocationContext';
-import translations from '@/lib/translations';
+import translations, { resolveLanguage } from '@/lib/translations';
 
 interface Feedback {
   id: string;
@@ -16,7 +16,8 @@ interface Feedback {
 export default function AdminFeedbacksPage() {
   const { user } = useAuth();
   const { language } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -8,7 +8,7 @@ function getProventosKey(range: string) {
   return `proventos_${range}`;
 }
 import { useLocation } from '@/contexts/LocationContext';
-import translations from '@/lib/translations';
+import translations, { resolveLanguage } from '@/lib/translations';
 
 type ReportsResponse = {
   totalsByCategory: { categoryId: string; name: string; color: string; icon: string; total: number | string }[];
@@ -94,7 +94,8 @@ export default function FinancialProjections() {
     }
   };
   const { language, currency } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const categoriesMap = useMemo(() => (t?.categories ?? {}) as Record<string, string>, [t]);
   const formatCurrency = (value: number) => new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
 

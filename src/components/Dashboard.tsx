@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 // import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from '@/contexts/LocationContext';
-import translations from '@/lib/translations';
+import translations, { resolveLanguage } from '@/lib/translations';
 import { PlusCircle, TrendingUp, TrendingDown, Target, Calendar, Loader2, AlertTriangle, Trophy } from 'lucide-react';
 import { useCategories, useExpenses, useStats, useAlerts } from '@/hooks/useData';
 import { useAchievements } from '@/hooks/useAchievements';
@@ -29,7 +29,8 @@ function QuickAddExpense({ onAddExpense, categories, loading }: QuickAddExpenseP
   });
   const [submitting, setSubmitting] = useState(false);
   const { language } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const categoriesMap = (t?.categories ?? {}) as Record<string, string>;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,6 +164,8 @@ function StatsCard({ title, value, icon: Icon, trend, color, t }: {
 
 export default function Dashboard() {
   const { currency, language, loading: locationLoading } = useLocation();
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const { categories, loading: categoriesLoading } = useCategories();
   const { createExpense } = useExpenses();
   
@@ -184,7 +187,6 @@ export default function Dashboard() {
       const prev = prevAchievementsRef.current;
       const newOnes = achievements.filter((a: Achievement) => !prev.includes(a.id));
       if (newOnes.length > 0) {
-        const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'];
         for (const ach of newOnes) {
           const list = t?.achievementsList as Record<string, string> | undefined;
           const label = list?.[ach.type] || ach.description;
@@ -247,7 +249,7 @@ export default function Dashboard() {
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.loading || 'Carregando...'}</span>
+          <span>{t.loading || 'Carregando...'}</span>
         </div>
       </div>
     );
@@ -257,17 +259,16 @@ export default function Dashboard() {
   const conquistasPanel = (
     <div className="bg-white rounded-lg shadow p-4 mb-8 mt-6 max-w-2xl">
       <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-        <Trophy className="w-5 h-5 text-yellow-500" /> {translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.achievements || 'Conquistas'}
+        <Trophy className="w-5 h-5 text-yellow-500" /> {t.achievements || 'Conquistas'}
       </h2>
-      <p className="text-gray-600 text-sm mb-2">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.achievementsDesc || 'Ganhe conquistas ao usar o app!'}</p>
+      <p className="text-gray-600 text-sm mb-2">{t.achievementsDesc || 'Ganhe conquistas ao usar o app!'}</p>
       {loadingAchievements ? (
-        <div className="text-gray-500">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.loading || 'Carregando...'}</div>
+        <div className="text-gray-500">{t.loading || 'Carregando...'}</div>
       ) : achievements.length === 0 ? (
-        <div className="text-gray-500">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noAchievements || 'Nenhuma conquista ainda.'}</div>
+        <div className="text-gray-500">{t.noAchievements || 'Nenhuma conquista ainda.'}</div>
       ) : (
         <ul className="space-y-2">
           {achievements.map((ach: Achievement) => {
-            const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'];
             const list = t?.achievementsList as Record<string, string> | undefined;
             const label = list?.[ach.type] || ach.description;
             return (
@@ -301,7 +302,7 @@ export default function Dashboard() {
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString(language);
   };
-  const categoriesMap = (translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.categories ?? {}) as Record<string, string>;
+  const categoriesMap = (t?.categories ?? {}) as Record<string, string>;
 
   // Detectar quando não há dados relevantes para o período selecionado
   const noStatsData =
@@ -315,7 +316,8 @@ export default function Dashboard() {
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.dashboard} - {translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.appName}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">{t.dashboard} - {t.appName}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">{t.dashboard} - {t.appName}</h1>
         
         {/* Filtro de ano/mês */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -323,6 +325,7 @@ export default function Dashboard() {
             <Calendar className="text-blue-600" size={20} />
             <span className="text-sm font-medium text-gray-700">
               {language === 'en-US' ? 'Period:' : language === 'es-ES' ? 'Período:' : 'Período:'}
+                            <div className="text-gray-500">{t.loading || 'Carregando...'}</div>
             </span>
             <select
               value={selectedMonth}
@@ -396,52 +399,52 @@ export default function Dashboard() {
         </div>
         {noStatsData ? (
           <div className="bg-white rounded-lg shadow-md p-6 mb-8 text-center">
-            <h3 className="text-lg font-semibold mb-2">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpensesTitle || 'Sem despesas neste período'}</h3>
-            <p className="text-gray-600 mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa registrada para o período selecionado.'}</p>
+            <h3 className="text-lg font-semibold mb-2">{t.noExpensesTitle || 'Sem despesas neste período'}</h3>
+            <p className="text-gray-600 mb-4">{t.noExpenses || 'Nenhuma despesa registrada para o período selecionado.'}</p>
             <QuickAddExpense onAddExpense={handleAddExpense} categories={categories} loading={categoriesLoading} />
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatsCard
-                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.thisMonthSpending || 'Gastos Este Mês'}
+                title={t.thisMonthSpending || 'Gastos Este Mês'}
                 value={formatCurrency(stats.totalThisMonth)}
                 icon={TrendingUp}
                 trend={stats.percentageChange}
                 color="bg-blue-500"
-                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+                t={t}
               />
               <StatsCard
-                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.lastMonthSpending || 'Gastos Mês Anterior'}
+                title={t.lastMonthSpending || 'Gastos Mês Anterior'}
                 value={formatCurrency(stats.totalLastMonth)}
                 icon={Calendar}
                 color="bg-gray-500"
-                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+                t={t}
               />
               <StatsCard
-                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.dailyAverage || 'Média Diária'}
+                title={t.dailyAverage || 'Média Diária'}
                 value={formatCurrency(stats.dailyAverage)}
                 icon={Target}
                 color="bg-green-500"
-                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+                t={t}
               />
               <StatsCard
-                title={translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.monthlyProjection || 'Projeção Mensal'}
+                title={t.monthlyProjection || 'Projeção Mensal'}
                 value={formatCurrency(stats.projectedMonthlyTotal)}
                 icon={TrendingUp}
                 color="bg-purple-500"
-                t={translations[language as 'pt-BR' | 'en-US' | 'es-ES']}
+                t={t}
               />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.byCategoryThisMonth || 'Despesas por Categoria (Este Mês)'}</h3>
+                <h3 className="text-lg font-semibold mb-4">{t.byCategoryThisMonth || 'Despesas por Categoria (Este Mês)'}</h3>
                 <div className="space-y-4">
                   {stats.topCategories.map(category => (
                     <div key={category.categoryId} className="flex items-center justify-between">
                       <div className="flex items-center">
                         <span className="text-2xl mr-3">{category.icon}</span>
-                        <span className="font-medium">{(translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.categories as Record<string,string>)?.[category.name] || category.name}</span>
+                        <span className="font-medium">{(t?.categories as Record<string,string>)?.[category.name] || category.name}</span>
                       </div>
                       <div className="text-right">
                         <div className="text-sm text-gray-600">{formatCurrency(category.amount)}</div>
@@ -458,12 +461,12 @@ export default function Dashboard() {
                     </div>
                   ))}
                   {stats.topCategories.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa registrada ainda'}</p>
+                    <p className="text-gray-500 text-center py-4">{t.noExpenses || 'Nenhuma despesa registrada ainda'}</p>
                   )}
                 </div>
               </div>
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold mb-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.latestExpenses || 'Últimas Despesas'}</h3>
+                <h3 className="text-lg font-semibold mb-4">{t.latestExpenses || 'Últimas Despesas'}</h3>
                 <div className="space-y-4">
                   {stats.recentExpenses.slice(0, 6).map((expense) => (
                     <div key={expense.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
@@ -485,7 +488,7 @@ export default function Dashboard() {
                     </div>
                   ))}
                   {stats.recentExpenses.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">{translations[language as 'pt-BR' | 'en-US' | 'es-ES']?.noExpenses || 'Nenhuma despesa encontrada'}</p>
+                    <p className="text-gray-500 text-center py-4">{t.noExpenses || 'Nenhuma despesa encontrada'}</p>
                   )}
                 </div>
               </div>

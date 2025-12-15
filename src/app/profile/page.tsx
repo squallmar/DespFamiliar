@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from '@/contexts/LocationContext';
-import translations from '@/lib/translations';
+import translations, { resolveLanguage } from '@/lib/translations';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
 
@@ -46,7 +46,8 @@ export default function ProfilePage() {
 function ProfileContent() {
   const { user, refreshUser } = useAuth();
   const { language } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);

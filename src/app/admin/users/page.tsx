@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import translations from '@/lib/translations';
+import translations, { resolveLanguage } from '@/lib/translations';
 import { useLocation } from '@/contexts/LocationContext';
 import { Trash2, X, Check, Database } from 'lucide-react';
 
@@ -24,7 +24,8 @@ export default function AdminUsersPage() {
   const [formatResult, setFormatResult] = useState<string|null>(null);
   const { user } = useAuth();
   const { language } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'] || translations['pt-BR'];
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useExpenses } from '@/hooks/useData';
-import translations from '@/lib/translations';
+import translations, { resolveLanguage } from '@/lib/translations';
 import { useLocation } from '@/contexts/LocationContext';
 import { Trophy, Star, Award, CheckCircle2, FileText, Flame, BarChart3, UserCheck, ShieldCheck, Repeat } from 'lucide-react';
 
@@ -11,7 +11,8 @@ export default function AchievementsPage() {
   const { achievements, isLoading } = useAchievements();
   const { expenses } = useExpenses();
   const { language } = useLocation();
-  const t = translations[language as 'pt-BR' | 'en-US' | 'es-ES'];
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey];
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [period, setPeriod] = useState<string>('all'); // all, 30d, 90d, year
 
