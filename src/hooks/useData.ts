@@ -103,6 +103,13 @@ export function useExpenses(year?: number, month?: number) {
       }
       
       setExpenses(prev => [data.expense, ...prev]);
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:data-changed'));
+        }
+      } catch (err) {
+        console.error('Error dispatching data-changed event:', err);
+      }
       return data.expense;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -127,6 +134,13 @@ export function useExpenses(year?: number, month?: number) {
       }
       
       setExpenses(prev => prev.map(exp => exp.id === id ? data.expense : exp));
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:data-changed'));
+        }
+      } catch (err) {
+        console.error('Error dispatching data-changed event:', err);
+      }
       return data.expense;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -147,6 +161,13 @@ export function useExpenses(year?: number, month?: number) {
       }
       
       setExpenses(prev => prev.filter(exp => exp.id !== id));
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:data-changed'));
+        }
+      } catch (err) {
+        console.error('Error dispatching data-changed event:', err);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       throw err;

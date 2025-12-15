@@ -91,6 +91,13 @@ export default function BillsPage() {
       if (response.ok) {
         const data = await response.json();
         setBills(data);
+        try {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('app:data-changed'));
+          }
+        } catch (err) {
+          console.error('Error dispatching data-changed event:', err);
+        }
       }
     } catch (error) {
       console.error('Error fetching bills:', error);
