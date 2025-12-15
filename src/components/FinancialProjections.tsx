@@ -307,10 +307,10 @@ export default function FinancialProjections() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold mb-4">{t.historyVsProjection || 'Histórico vs Projeção de Gastos'}</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
+              <LineChart data={chartData} margin={{ left: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis />
+                <YAxis width={96} tickFormatter={(v) => formatCurrency(Number(v))} />
                 <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} />
                 <Legend />
                 <Line 

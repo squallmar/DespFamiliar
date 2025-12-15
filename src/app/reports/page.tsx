@@ -552,10 +552,10 @@ export default function ReportsPage() {
                   <h3 className="font-semibold mb-3">{t('dailyEvolution')}</h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={dailyDataForChart} margin={{ left: 8, right: 16 }}>
+                      <LineChart data={dailyDataForChart} margin={{ left: 16, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="day" tickFormatter={(d: string) => new Date(d).toLocaleDateString(language || 'en-US')} minTickGap={24} />
-                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={80} />
+                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={100} />
                         <Tooltip labelFormatter={(d) => new Date(String(d)).toLocaleDateString(language || 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })} formatter={(v: number) => formatCurrency(Number(v))} />
                         <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} dot={false} />
                       </LineChart>
@@ -567,10 +567,10 @@ export default function ReportsPage() {
                   <h3 className="font-semibold mb-3">{t('monthlyTotals')}</h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyDataForChart} margin={{ left: 8, right: 16 }}>
+                      <BarChart data={monthlyDataForChart} margin={{ left: 16, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="ym" />
-                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={80} />
+                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={100} />
                         <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
                         <Bar dataKey="total" fill="#10b981" />
                       </BarChart>
