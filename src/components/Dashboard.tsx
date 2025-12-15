@@ -181,6 +181,31 @@ export default function Dashboard() {
   const { show: showToast } = useToast();
   const prevAchievementsRef = useRef<string[]>([]);
 
+  // Fallback: se não houver despesas no período, buscar últimas despesas sem filtro
+  const [fallbackRecent, setFallbackRecent] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchFallback = async () => {
+      try {
+        if (stats && Array.isArray(stats.recentExpenses) && stats.recentExpenses.length === 0) {
+          const res = await fetch('/api/expenses');
+          if (res.ok) {
+            const data = await res.json();
+            const arr = Array.isArray(data.expenses) ? data.expenses : (Array.isArray(data) ? data : []);
+            setFallbackRecent(arr);
+          } else {
+            setFallbackRecent([]);
+          }
+        } else {
+          setFallbackRecent([]);
+        }
+      } catch (err) {
+        console.error('Error fetching fallback expenses:', err);
+        setFallbackRecent([]);
+      }
+    };
+    fetchFallback();
+  }, [stats]);
+
   useEffect(() => {
     if (!loadingAchievements && achievements?.length) {
       const currentIds = achievements.map((a: Achievement) => a.id);
@@ -312,31 +337,7 @@ export default function Dashboard() {
     stats.projectedMonthlyTotal === 0 &&
     stats.topCategories.length === 0 &&
     stats.recentExpenses.length === 0;
-
-  // Fallback: se não houver despesas no período, buscar últimas despesas sem filtro
-  const [fallbackRecent, setFallbackRecent] = useState<any[]>([]);
-  useEffect(() => {
-    const fetchFallback = async () => {
-      try {
-        if (stats && Array.isArray(stats.recentExpenses) && stats.recentExpenses.length === 0) {
-          const res = await fetch('/api/expenses');
-          if (res.ok) {
-            const data = await res.json();
-            const arr = Array.isArray(data.expenses) ? data.expenses : (Array.isArray(data) ? data : []);
-            setFallbackRecent(arr);
-          } else {
-            setFallbackRecent([]);
-          }
-        } else {
-          setFallbackRecent([]);
-        }
-      } catch (err) {
-        console.error('Error fetching fallback expenses:', err);
-        setFallbackRecent([]);
-      }
-    };
-    fetchFallback();
-  }, [stats]);
+  
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
