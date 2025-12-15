@@ -317,7 +317,6 @@ export default function Dashboard() {
     <div className="p-6 bg-gray-50 min-h-screen relative">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">{t.dashboard} - {t.appName}</h1>
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">{t.dashboard} - {t.appName}</h1>
         
         {/* Filtro de ano/mês */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -325,7 +324,6 @@ export default function Dashboard() {
             <Calendar className="text-blue-600" size={20} />
             <span className="text-sm font-medium text-gray-700">
               {language === 'en-US' ? 'Period:' : language === 'es-ES' ? 'Período:' : 'Período:'}
-                            <div className="text-gray-500">{t.loading || 'Carregando...'}</div>
             </span>
             <select
               value={selectedMonth}
