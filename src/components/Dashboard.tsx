@@ -313,6 +313,31 @@ export default function Dashboard() {
     stats.topCategories.length === 0 &&
     stats.recentExpenses.length === 0;
 
+  // Fallback: se não houver despesas no período, buscar últimas despesas sem filtro
+  const [fallbackRecent, setFallbackRecent] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchFallback = async () => {
+      try {
+        if (stats && Array.isArray(stats.recentExpenses) && stats.recentExpenses.length === 0) {
+          const res = await fetch('/api/expenses');
+          if (res.ok) {
+            const data = await res.json();
+            const arr = Array.isArray(data.expenses) ? data.expenses : (Array.isArray(data) ? data : []);
+            setFallbackRecent(arr);
+          } else {
+            setFallbackRecent([]);
+          }
+        } else {
+          setFallbackRecent([]);
+        }
+      } catch (err) {
+        console.error('Error fetching fallback expenses:', err);
+        setFallbackRecent([]);
+      }
+    };
+    fetchFallback();
+  }, [stats]);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
       <div className="max-w-7xl mx-auto">
@@ -466,28 +491,37 @@ export default function Dashboard() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h3 className="text-lg font-semibold mb-4">{t.latestExpenses || 'Últimas Despesas'}</h3>
                 <div className="space-y-4">
-                  {stats.recentExpenses.slice(0, 6).map((expense) => (
-                    <div key={expense.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                      <div className="flex items-center">
-                        <span className="text-xl mr-3">{expense.category_icon}</span>
-                        <div>
-                          <span className="font-medium">{expense.description}</span>
-                          <div className="text-sm text-gray-500">{categoriesMap[expense.category_name || ''] || expense.category_name}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-semibold text-red-600">
-                          {formatCurrency(expense.amount)}
-                        </span>
-                        <div className="text-xs text-gray-500">
-                          {formatDate(expense.date)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {stats.recentExpenses.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">{t.noExpenses || 'Nenhuma despesa encontrada'}</p>
-                  )}
+                  {
+                    (() => {
+                      const displayRecent = (Array.isArray(stats.recentExpenses) && stats.recentExpenses.length > 0) ? stats.recentExpenses : fallbackRecent;
+                      return (
+                        <>
+                          {displayRecent.slice(0, 6).map((expense: any) => (
+                            <div key={expense.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                              <div className="flex items-center">
+                                <span className="text-xl mr-3">{expense.category_icon}</span>
+                                <div>
+                                  <span className="font-medium">{expense.description}</span>
+                                  <div className="text-sm text-gray-500">{categoriesMap[expense.category_name || ''] || expense.category_name}</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-semibold text-red-600">
+                                  {formatCurrency(expense.amount)}
+                                </span>
+                                <div className="text-xs text-gray-500">
+                                  {formatDate(expense.date)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {(!displayRecent || displayRecent.length === 0) && (
+                            <p className="text-gray-500 text-center py-4">{t.noExpenses || 'Nenhuma despesa encontrada'}</p>
+                          )}
+                        </>
+                      );
+                    })()
+                  }
                 </div>
               </div>
             </div>
