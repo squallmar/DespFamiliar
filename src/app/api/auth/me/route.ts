@@ -18,8 +18,17 @@ export async function GET(request: NextRequest) {
     }
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
     const db = await getDatabase();
-  const userResult = await db.query('SELECT premium, admin, avatar FROM users WHERE id = $1', [decoded.userId]);
+  const userResult = await db.query('SELECT premium, admin, avatar, premium_expires_at FROM users WHERE id = $1', [decoded.userId]);
   const userDb = userResult.rows[0];
+    // If premium_expires_at is set and is in the past, ensure premium flag is cleared (migration safety)
+    if (userDb && userDb.premium_expires_at && new Date(userDb.premium_expires_at) < new Date()) {
+      try {
+        await db.query('UPDATE users SET premium = false WHERE id = $1', [decoded.userId]);
+        userDb.premium = false;
+      } catch (e) {
+        console.error('Error clearing expired premium flag:', e);
+      }
+    }
     return NextResponse.json({
       user: {
         id: decoded.userId,
@@ -27,7 +36,8 @@ export async function GET(request: NextRequest) {
         email: decoded.email,
         premium: !!(userDb && (userDb.premium || userDb.admin)),
         admin: !!(userDb && userDb.admin),
-        avatar: userDb?.avatar || '👤'
+        avatar: userDb?.avatar || '👤',
+        premium_expires_at: userDb?.premium_expires_at || null
       }
     });
   } catch (error) {

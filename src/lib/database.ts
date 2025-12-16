@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
 let pool: Pool | null = null;
 
@@ -21,6 +22,20 @@ export async function getDatabase() {
     await pool.query('CREATE TABLE IF NOT EXISTS achievements (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, type TEXT NOT NULL, description TEXT NOT NULL, awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id))');
     await pool.query('CREATE TABLE IF NOT EXISTS bills (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, description TEXT NOT NULL, amount REAL NOT NULL, due_date TIMESTAMP NOT NULL, category_id TEXT, status TEXT DEFAULT \'pending\', paid_date TIMESTAMP, recurring BOOLEAN DEFAULT FALSE, recurring_type TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id), FOREIGN KEY (category_id) REFERENCES categories (id))');
 
+    // Table to store admin-issued premium coupons
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS premium_coupons (
+        id TEXT PRIMARY KEY,
+        code TEXT UNIQUE NOT NULL,
+        issuer_id TEXT,
+        expires_at TIMESTAMP,
+        used_by TEXT,
+        used_at TIMESTAMP,
+        valid BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses (user_id, date)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses (category_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_budgets_user ON budgets (user_id)');
@@ -32,6 +47,26 @@ export async function getDatabase() {
     // Ensure premium column exists (for migration)
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium BOOLEAN DEFAULT FALSE');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT \'👤\'');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_expires_at TIMESTAMP');
+
+    // Ensure a development admin user exists (useful for local testing).
+    // You can override email/password with env vars: DEV_ADMIN_EMAIL, DEV_ADMIN_PASSWORD
+    try {
+      const adminEmail = process.env.DEV_ADMIN_EMAIL || 'squallmar@gmail.com';
+      const adminPassword = process.env.DEV_ADMIN_PASSWORD || 'mM2038@';
+      const adminName = 'Admin';
+      const res = await pool.query('SELECT id FROM users WHERE email = $1', [adminEmail]);
+      if (res.rows.length === 0) {
+        const hash = await bcrypt.hash(adminPassword, 10);
+        await pool.query(
+          'INSERT INTO users (id, name, email, password, premium, admin, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (email) DO NOTHING',
+          [uuidv4(), adminName, adminEmail, hash, true, true]
+        );
+        console.log('Dev admin user created:', adminEmail);
+      }
+    } catch (err) {
+      console.warn('Could not ensure dev admin user:', err?.message || err);
+    }
   }
   return pool;
 }

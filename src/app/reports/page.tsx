@@ -48,6 +48,9 @@ export default function ReportsPage() {
     user = { ...user, premium: true };
   }
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
 
   // Função para abrir paywall se não for premium
   const requirePremium = (action: () => void) => {
@@ -66,6 +69,33 @@ export default function ReportsPage() {
       window.location.href = data.url;
     } else {
       alert(data.error || 'Erro ao iniciar checkout');
+    }
+  };
+
+  const handleOpenCoupon = () => setCouponOpen(true);
+
+  const handleRedeemCoupon = async () => {
+    if (!couponCode) return;
+    try {
+      setRedeeming(true);
+      const res = await fetch('/api/premium/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ code: couponCode.trim() })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erro ao resgatar cupom');
+      alert('Cupom aplicado! Você é premium por 1 ano.');
+      setCouponOpen(false);
+      setCouponCode('');
+      // refresh auth
+      await fetch('/api/auth/me', { credentials: 'include' });
+      window.location.reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro');
+    } finally {
+      setRedeeming(false);
     }
   };
 
@@ -492,6 +522,13 @@ export default function ReportsPage() {
                 >
                   {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>{t('exporting')}</>) : t('exportPDFButton')}
                 </button>
+                <button
+                  onClick={handleOpenCoupon}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >
+                  Usar Cupom
+                </button>
                 {/* Botão Pix premium */}
                 <button
                   onClick={handlePix}
@@ -583,6 +620,23 @@ export default function ReportsPage() {
         </div>
       </div>
       <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} onUpgrade={handleUpgrade} />
+      {/* Cupom modal */}
+      {couponOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Resgatar Cupom</h3>
+              <button onClick={() => setCouponOpen(false)} className="text-gray-500">✕</button>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">Insira o código do cupom fornecido pelo administrador para ativar 1 ano de Premium.</p>
+            <input type="text" value={couponCode} onChange={e => setCouponCode(e.target.value)} className="w-full border rounded px-3 py-2 mb-4" placeholder="Código do cupom" />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setCouponOpen(false)} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button>
+              <button onClick={handleRedeemCoupon} disabled={redeeming} className="px-4 py-2 bg-indigo-600 text-white rounded">{redeeming ? 'Resgatando...' : 'Resgatar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }

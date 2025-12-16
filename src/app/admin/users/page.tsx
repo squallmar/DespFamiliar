@@ -30,6 +30,11 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+  const [newCouponCode, setNewCouponCode] = useState('');
+  const [newCouponMonths, setNewCouponMonths] = useState<number>(12);
+  const [creatingCoupon, setCreatingCoupon] = useState(false);
 
   const loadUsers = () => {
     if (!user?.admin) return;
@@ -49,6 +54,25 @@ export default function AdminUsersPage() {
   useEffect(() => {
     loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const loadCoupons = async () => {
+    if (!user?.admin) return;
+    setLoadingCoupons(true);
+    try {
+      const res = await fetch('/api/premium/coupons', { credentials: 'include' });
+      const json = await res.json();
+      if (res.ok) setCoupons(json.coupons || []);
+      else setCoupons([]);
+    } catch (e) {
+      setCoupons([]);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCoupons();
   }, [user]);
 
   const handleToggleStatus = async (userId: string, field: 'admin' | 'premium', currentValue: boolean) => {
@@ -254,6 +278,75 @@ export default function AdminUsersPage() {
           </table>
         </div>
       )}
+
+      {/* Coupons management */}
+      <div className="mt-8 bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-bold mb-4">Cupons Premium</h2>
+        <div className="flex gap-2 mb-4">
+          <input value={newCouponCode} onChange={e => setNewCouponCode(e.target.value)} placeholder="Código opcional" className="px-3 py-2 border rounded w-1/3" />
+          <input type="number" value={newCouponMonths} onChange={e => setNewCouponMonths(Number(e.target.value))} min={1} max={60} className="px-3 py-2 border rounded w-1/6" />
+          <button onClick={async () => {
+            setCreatingCoupon(true);
+            try {
+              const res = await fetch('/api/premium/coupons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ code: newCouponCode || undefined, validForMonths: newCouponMonths }) });
+              const json = await res.json();
+              if (res.ok) {
+                alert('Cupom criado: ' + json.code);
+                setNewCouponCode('');
+                setNewCouponMonths(12);
+                loadCoupons();
+              } else {
+                alert(json.error || 'Erro ao criar cupom');
+              }
+            } catch (e) {
+              alert('Erro ao criar cupom');
+            } finally {
+              setCreatingCoupon(false);
+            }
+          }} disabled={creatingCoupon} className="px-4 py-2 bg-indigo-600 text-white rounded">{creatingCoupon ? 'Criando...' : 'Criar Cupom'}</button>
+        </div>
+
+        {loadingCoupons ? (<div>Carregando cupons...</div>) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold">Código</th>
+                  <th className="px-4 py-2 text-left font-semibold">Criado em</th>
+                  <th className="px-4 py-2 text-left font-semibold">Expira em</th>
+                  <th className="px-4 py-2 text-left font-semibold">Usado por</th>
+                  <th className="px-4 py-2 text-center font-semibold">Valido</th>
+                  <th className="px-4 py-2 text-center font-semibold">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {coupons.map(c => (
+                  <tr key={c.id} className="bg-white">
+                    <td className="px-4 py-2 font-mono">{c.code}</td>
+                    <td className="px-4 py-2">{c.created_at ? new Date(c.created_at).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2">{c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '-'}</td>
+                    <td className="px-4 py-2">{c.used_by || '-'}</td>
+                    <td className="px-4 py-2 text-center">{c.valid ? 'Sim' : 'Não'}</td>
+                    <td className="px-4 py-2 text-center">
+                      <button onClick={async () => {
+                        if (!confirm('Revogar este cupom?')) return;
+                        try {
+                          const res = await fetch('/api/premium/coupons', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: c.id }) });
+                          const json = await res.json();
+                          if (res.ok) {
+                            alert('Cupom revogado');
+                            loadCoupons();
+                          } else alert(json.error || 'Erro');
+                        } catch (e) { alert('Erro'); }
+                      }} className="px-3 py-1 bg-red-600 text-white rounded">Revogar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Modal de confirmação de exclusão */}
       {showDeleteModal && (
