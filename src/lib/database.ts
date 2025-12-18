@@ -48,6 +48,21 @@ export async function getDatabase() {
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium BOOLEAN DEFAULT FALSE');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT \'👤\'');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_expires_at TIMESTAMP');
+    // Incomes table for persisted proventos
+    await pool.query(`CREATE TABLE IF NOT EXISTS incomes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      month TEXT NOT NULL,
+      amount REAL NOT NULL,
+      source TEXT,
+      notes TEXT,
+      recurring BOOLEAN DEFAULT FALSE,
+      recurring_type TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )`);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_incomes_user_month ON incomes (user_id, month)');
 
     // Ensure a development admin user exists (useful for local testing).
     // You can override email/password with env vars: DEV_ADMIN_EMAIL, DEV_ADMIN_PASSWORD

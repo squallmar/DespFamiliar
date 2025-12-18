@@ -205,6 +205,195 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ReportsResponse | null>(null);
+
+  // Proventos (renda) local state (saved to localStorage per-user+month)
+  const getCurrentMonthKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
+  const [proventosMonth, setProventosMonth] = useState<string>(() => getCurrentMonthKey(new Date()));
+  const [proventosInput, setProventosInput] = useState<string>('');
+  const [proventosValue, setProventosValue] = useState<number>(0);
+  const [proventosSource, setProventosSource] = useState<string>('Salário');
+  const [proventosNotes, setProventosNotes] = useState<string>('');
+  const [proventosRecurring, setProventosRecurring] = useState<boolean>(false);
+  const [proventosRecurringType, setProventosRecurringType] = useState<'monthly'|'yearly'|'none'>('monthly');
+
+  const loadProventos = (monthKey?: string) => {
+    try {
+      // Prefer server-stored incomes if user is authenticated
+      const keyMonth = monthKey || proventosMonth;
+      if (user && user.id) {
+        fetch(`/api/incomes?month=${keyMonth}`, { credentials: 'include' })
+          .then(res => res.json())
+          .then(json => {
+            if (json.items && json.items.length > 0) {
+              const item = json.items[0];
+              const amount = Number(item.amount) || 0;
+              setProventosValue(amount);
+              setProventosInput(String(amount));
+              setProventosSource(item.source || 'Salário');
+              setProventosNotes(item.notes || '');
+              setProventosRecurring(Boolean(item.recurring));
+              setProventosRecurringType(item.recurring_type || 'monthly');
+            } else {
+              // fallback to localStorage
+              const userId = user.id || 'anon';
+              const key = `proventos:${userId}:${keyMonth}`;
+              const raw = localStorage.getItem(key);
+              if (raw) {
+                try {
+                  const parsed = JSON.parse(raw);
+                  const num = Number(parsed.amount ?? parsed);
+                  setProventosValue(Number.isFinite(num) ? num : 0);
+                  setProventosInput(String(num || ''));
+                  setProventosSource(parsed.source || 'Salário');
+                  setProventosNotes(parsed.notes || '');
+                  setProventosRecurring(Boolean(parsed.recurring));
+                  setProventosRecurringType(parsed.recurring_type || 'monthly');
+                } catch {
+                  const num = Number(raw);
+                  setProventosValue(Number.isFinite(num) ? num : 0);
+                  setProventosInput(String(num));
+                  setProventosSource('Salário');
+                  setProventosNotes('');
+                  setProventosRecurring(false);
+                  setProventosRecurringType('monthly');
+                }
+              } else {
+                setProventosValue(0);
+                setProventosInput('');
+                setProventosSource('Salário');
+                setProventosNotes('');
+                setProventosRecurring(false);
+                setProventosRecurringType('monthly');
+              }
+            }
+          })
+          .catch(() => {
+            setProventosValue(0);
+            setProventosInput('');
+            setProventosSource('Salário');
+            setProventosNotes('');
+            setProventosRecurring(false);
+            setProventosRecurringType('monthly');
+          });
+        return;
+      }
+      // Anonymous: use localStorage
+      const userId = user?.id || 'anon';
+      const key = `proventos:${userId}:${keyMonth}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const num = Number(raw);
+        setProventosValue(Number.isFinite(num) ? num : 0);
+        setProventosInput(String(num));
+      } else {
+        setProventosValue(0);
+        setProventosInput('');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') loadProventos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proventosMonth, user]);
+
+  const saveProventos = (value: number, monthKey = proventosMonth) => {
+    try {
+      if (user && user.id) {
+        // Try to POST or PUT via API
+        (async () => {
+          try {
+            // check existing
+            const res = await fetch(`/api/incomes?month=${monthKey}`, { credentials: 'include' });
+            const json = await res.json();
+            if (res.ok && json.items && json.items.length > 0) {
+              const item = json.items[0];
+              const putRes = await fetch('/api/incomes', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, month: monthKey, amount: value, source: proventosSource, notes: proventosNotes, recurring: proventosRecurring, recurring_type: proventosRecurringType }) });
+              if (!putRes.ok) throw new Error('Erro ao atualizar proventos');
+            } else {
+              const postRes = await fetch('/api/incomes', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: monthKey, amount: value, source: proventosSource, notes: proventosNotes, recurring: proventosRecurring, recurring_type: proventosRecurringType }) });
+              if (!postRes.ok) throw new Error('Erro ao criar proventos');
+            }
+            setProventosValue(value);
+            setProventosInput(String(value));
+            alert('Proventos salvos.');
+          } catch (e) {
+            alert(e instanceof Error ? e.message : 'Erro ao salvar no servidor');
+          }
+        })();
+        return;
+      }
+      // fallback local
+      const userId = user?.id || 'anon';
+      const key = `proventos:${userId}:${monthKey}`;
+      const payload = { amount: value, source: proventosSource, notes: proventosNotes, recurring: proventosRecurring, recurring_type: proventosRecurringType };
+      localStorage.setItem(key, JSON.stringify(payload));
+      setProventosValue(value);
+      setProventosInput(String(value));
+      alert('Proventos salvos.');
+    } catch (e) {
+      alert('Erro ao salvar proventos.');
+    }
+  };
+
+  const clearProventos = (monthKey = proventosMonth) => {
+    try {
+      if (user && user.id) {
+        // delete from server if exists
+        (async () => {
+          try {
+            const res = await fetch(`/api/incomes?month=${monthKey}`, { credentials: 'include' });
+            const json = await res.json();
+            if (res.ok && json.items && json.items.length > 0) {
+              const id = json.items[0].id;
+              await fetch(`/api/incomes?id=${id}`, { method: 'DELETE', credentials: 'include' });
+            }
+            // also clear local fallback
+            const userId = user.id || 'anon';
+            const key = `proventos:${userId}:${monthKey}`;
+            localStorage.removeItem(key);
+            setProventosValue(0);
+            setProventosInput('');
+            alert('Proventos removidos.');
+          } catch {
+            alert('Erro ao remover proventos.');
+          }
+        })();
+        return;
+      }
+      const userId = user?.id || 'anon';
+      const key = `proventos:${userId}:${monthKey}`;
+      localStorage.removeItem(key);
+      setProventosValue(0);
+      setProventosInput('');
+      alert('Proventos removidos.');
+    } catch {
+      // ignore
+    }
+  };
+
+  // Fetch history for last 6 months for sparkline
+  const [incomeHistory, setIncomeHistory] = useState<{ month: string; total: number }[]>([]);
+  useEffect(() => {
+    if (!user || !user.id) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/incomes', { credentials: 'include' });
+        const json = await res.json();
+        if (res.ok && json.history) {
+          // history comes ordered desc; take last 6 and reverse for chart
+          const rows = json.history.map((r: any) => ({ month: r.month, total: Number(r.total) }));
+          const last6 = rows.slice(0, 12).reverse();
+          setIncomeHistory(last6);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
   // Helper para formatar moeda
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
@@ -328,6 +517,8 @@ export default function ReportsPage() {
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('reportsTitle')}</h1>
+
+
 
           <div className="bg-white rounded-lg shadow p-4 mb-6">
             {/* Painel de Resumo */}

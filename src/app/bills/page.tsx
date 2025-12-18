@@ -3,6 +3,7 @@ import { PiggyBank } from 'lucide-react';
 
 
 import { useEffect, useState } from 'react';
+import ProventosCard from '@/components/ProventosCard';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from '@/contexts/LocationContext';
@@ -497,42 +498,7 @@ export default function BillsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Card de Proventos */}
-        <div className="mb-6">
-          <div className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-emerald-500">
-                <PiggyBank className="text-white" size={28} />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-800 mb-1">Proventos ({new Date(period.year, period.month-1).toLocaleString(language, { month: 'long', year: 'numeric' })})</h2>
-                <p className="text-gray-500 text-sm">Informe o total de proventos (salário, renda, etc) para o mês selecionado.</p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-2 min-w-[220px]">
-              <input
-                type="number"
-                min={0}
-                step={1}
-                className="border border-gray-300 rounded px-4 py-2 text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 w-full md:w-48 text-right"
-                value={proventos}
-                onChange={e => handleProventosChange(Number(e.target.value))}
-                placeholder="0,00"
-                aria-label="Proventos"
-              />
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-gray-600 text-sm">Saldo:</span>
-                <span className={`text-lg font-bold ${saldoNegativo ? 'text-red-600' : 'text-green-700'}`}>{formatCurrency(saldo)}</span>
-              </div>
-              {saldoAlerta && (
-                <div className="mt-2 bg-red-100 border border-red-300 text-red-700 rounded px-3 py-2 text-sm font-semibold flex items-center gap-2">
-                  <span>⚠️</span>
-                  <span>Você está gastando demais! Não pode gastar mais este mês. Saldo {formatCurrency(saldo)} será prejudicado seu orçamento.</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <ProventosCard period={period} totalMonth={totalMes} />
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">💳 Contas a Pagar</h1>
           <button
