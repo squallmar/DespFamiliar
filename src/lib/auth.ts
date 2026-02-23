@@ -1,9 +1,15 @@
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'dev-secret-local' : '');
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required in production');
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET environment variable is required in production');
+    }
+    return 'dev-secret-local';
+  }
+  return secret;
 }
 
 interface JWTPayload {
@@ -20,7 +26,7 @@ export function getAuthUser(request: NextRequest): JWTPayload | null {
       return null;
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JWTPayload;
     return decoded;
   } catch (error) {
     console.error('Erro na verificação do token:', error);
