@@ -1,7 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'dev-secret-local' : '');
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
 
 interface JWTPayload {
   userId: string;

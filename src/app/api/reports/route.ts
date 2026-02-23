@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Totais por categoria no período (despesas + contas pagas + despesas recorrentes projetadas)
     const totalsByCategoryResult = await db.query(
       `SELECT c.id as categoryId, c.name, c.color, c.icon,
-              COALESCE(SUM(e.amount), 0) + COALESCE(SUM(b.amount), 0) + COALESCE(SUM(re.amount), 0) as total
+              COALESCE(SUM(e.amount), 0) + COALESCE(SUM(b.amount), 0) as total
        FROM categories c
        LEFT JOIN expenses e
          ON e.category_id = c.id
@@ -37,19 +37,6 @@ export async function GET(request: NextRequest) {
         AND b.paid_date IS NOT NULL
         AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%')
         AND date(b.paid_date) BETWEEN date($2) AND date($3)
-       LEFT JOIN (
-         SELECT e.category_id, SUM(e.amount) as amount
-         FROM expenses e
-         WHERE e.user_id = $1 AND e.recurring = true
-         AND date(e.date) BETWEEN date($2) - INTERVAL '24 months' AND date($3)
-         AND (
-           e.recurring_type = 'monthly'
-           OR (e.recurring_type = 'daily' AND extract(day FROM date($3) - e.date) >= 1)
-           OR (e.recurring_type = 'weekly' AND extract(day FROM date($3) - e.date) >= 7)
-           OR (e.recurring_type = 'yearly' AND extract(day FROM date($3) - e.date) >= 365)
-         )
-         GROUP BY e.category_id
-       ) re ON re.category_id = c.id
        WHERE c.user_id = $4
        GROUP BY c.id, c.name, c.color, c.icon
        ORDER BY total DESC`,
