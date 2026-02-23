@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
     const { amount, description, categoryId, date, recurring = false, recurringType } = body;
 
     const toYMD = (d: Date | string) => {
+      if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
       const dt = typeof d === 'string' ? new Date(d) : d;
       const y = dt.getFullYear();
       const m = String(dt.getMonth() + 1).padStart(2, '0');
@@ -122,14 +123,16 @@ export async function POST(request: NextRequest) {
       // Se for recorrente, cria para todos os meses restantes do ano (ou semanas/anos)
       const startDate = date ? new Date(date) : new Date();
       if (recurringType === 'monthly') {
-        // Cria para todos os meses restantes do ano, incluindo o mês inicial
-        const year = startDate.getFullYear();
-        const month = startDate.getMonth(); // 0-based
-        const day = startDate.getDate();
-        for (let m = month; m < 12; m++) {
-          const safeDay = clampDay(year, m, day);
+        // Cria para os próximos 12 meses a partir da data inicial, cruzando anos
+        const startYear = startDate.getFullYear();
+        const startMonth = startDate.getMonth();
+        const startDay = startDate.getDate();
+        for (let i = 0; i < 12; i++) {
+          const targetMonth = (startMonth + i) % 12;
+          const targetYear = startYear + Math.floor((startMonth + i) / 12);
+          const safeDay = clampDay(targetYear, targetMonth, startDay);
           const expenseId = uuidv4();
-          const expenseDate = new Date(year, m, safeDay);
+          const expenseDate = new Date(targetYear, targetMonth, safeDay);
           await db.query(
             `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -137,9 +140,9 @@ export async function POST(request: NextRequest) {
           );
         }
       } else if (recurringType === 'weekly') {
-        // Cria para as próximas 12 semanas
+        // Cria para as próximas 52 semanas
         const current = new Date(startDate);
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 52; i++) {
           const expenseId = uuidv4();
           await db.query(
             `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
@@ -252,7 +255,19 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, amount, description, categoryId, date, recurring, recurringType } = body;
 
+    if (!id) {
+      return NextResponse.json({ error: 'Expense ID is required' }, { status: 400 });
+    }
+
+    // Verificar se a despesa pertence ao usuário
+  const existingExpenseResult = await db.query('SELECT user_id, description, recurring_type FROM expenses WHERE id = $1', [id]);
+  const existingExpense = existingExpenseResult.rows[0];
+    if (!existingExpense || existingExpense.user_id !== user.userId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    }
+
     const toYMD = (d: Date | string) => {
+      if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
       const dt = typeof d === 'string' ? new Date(d) : d;
       const y = dt.getFullYear();
       const m = String(dt.getMonth() + 1).padStart(2, '0');
@@ -260,23 +275,27 @@ export async function PUT(request: NextRequest) {
       return `${y}-${m}-${day}`;
     };
 
-    if (!id) {
-      return NextResponse.json({ error: 'Expense ID is required' }, { status: 400 });
-    }
-
-    // Verificar se a despesa pertence ao usuário
-  const existingExpenseResult = await db.query('SELECT user_id FROM expenses WHERE id = $1', [id]);
-  const existingExpense = existingExpenseResult.rows[0];
-    if (!existingExpense || existingExpense.user_id !== user.userId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
-    }
-
     await db.query(
       `UPDATE expenses 
       SET amount = $1, description = $2, category_id = $3, date = $4, recurring = $5, recurring_type = $6
       WHERE id = $7`,
       [amount, description, categoryId, toYMD(date), recurring, recurringType, id]
     );
+
+    // Se for recorrente, atualiza todas as ocorrências futuras com a mesma descrição/tipo
+    if (recurring && recurringType) {
+      await db.query(
+        `UPDATE expenses
+         SET amount = $1, description = $2, category_id = $3, recurring_type = $4
+         WHERE user_id = $5
+           AND description = $6
+           AND recurring = true
+           AND recurring_type = $7
+           AND date > $8
+           AND id != $9`,
+        [amount, description, categoryId, recurringType, user.userId, existingExpense.description, existingExpense.recurring_type, toYMD(date), id]
+      );
+    }
 
     const expenseResult = await db.query(
       `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
