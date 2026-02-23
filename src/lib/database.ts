@@ -6,11 +6,11 @@ let pool: Pool | null = null;
 
 export async function getDatabase() {
   if (!pool) {
-    pool = new Pool({
-      connectionString:
-        process.env.DATABASE_URL ||
-        'postgres://postgres:mM202038@@localhost:5432/despfamiliar',
-    });
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is required');
+    }
+    pool = new Pool({ connectionString });
 
     // =========================
     // TABELAS PRINCIPAIS

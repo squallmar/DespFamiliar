@@ -260,7 +260,8 @@ export async function GET(request: NextRequest) {
     const percentageChange = lastTotal > 0 ? ((thisTotal - lastTotal) / lastTotal) * 100 : 0;
     
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const currentDay = now.getDate();
+    const isCurrentMonth = (currentYear === now.getFullYear() && currentMonth === now.getMonth() + 1);
+    const currentDay = isCurrentMonth ? now.getDate() : new Date(currentYear, currentMonth, 0).getDate();
     const nonRecurringTotal = Number(thisMonthNonRecurring.total || 0);
     const dailyAverage = currentDay > 0 ? (nonRecurringTotal / currentDay) : 0;
 

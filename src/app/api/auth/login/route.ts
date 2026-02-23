@@ -54,11 +54,8 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+      maxAge: 7 * 24 * 60 * 60 // 7 dias
     });
-
-    console.log('Tentando login para:', email, 'Encontrado:', !!user);
-    console.log('Senha correta?', isValidPassword);
 
     return response;
   } catch (error) {
