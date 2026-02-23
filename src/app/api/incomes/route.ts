@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
       [user.userId]
     );
     return NextResponse.json({ history: historyRes.rows });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(e);
-    return NextResponse.json({ error: e?.message || 'Erro' }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro' }, { status: 500 });
   }
 }
 
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
     await db.query('INSERT INTO incomes (id, user_id, month, amount, source, notes, recurring, recurring_type) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [id, user.userId, month, amount, source || null, notes || null, recurring ? true : false, recurring_type || null]);
     const res = await db.query('SELECT * FROM incomes WHERE id = $1', [id]);
     return NextResponse.json({ item: res.rows[0] });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(e);
-    return NextResponse.json({ error: e?.message || 'Erro' }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro' }, { status: 500 });
   }
 }
 
@@ -57,9 +57,9 @@ export async function PUT(request: NextRequest) {
     await db.query('UPDATE incomes SET month=$1, amount=$2, source=$3, notes=$4, recurring=$7, recurring_type=$8, updated_at=NOW() WHERE id=$5 AND user_id=$6', [month, amount, source || null, notes || null, id, user.userId, recurring ? true : false, recurring_type || null]);
     const res = await db.query('SELECT * FROM incomes WHERE id = $1', [id]);
     return NextResponse.json({ item: res.rows[0] });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(e);
-    return NextResponse.json({ error: e?.message || 'Erro' }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro' }, { status: 500 });
   }
 }
 
@@ -72,8 +72,8 @@ export async function DELETE(request: NextRequest) {
     const db = await getDatabase();
     await db.query('DELETE FROM incomes WHERE id=$1 AND user_id=$2', [id, user.userId]);
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(e);
-    return NextResponse.json({ error: e?.message || 'Erro' }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro' }, { status: 500 });
   }
 }

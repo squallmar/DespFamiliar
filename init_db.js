@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getDatabase } = require('./src/lib/database');
 
 async function initDb() {

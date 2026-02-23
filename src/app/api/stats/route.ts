@@ -3,6 +3,28 @@ import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
+interface CategoryStat {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  total: number;
+  count: number;
+}
+
+interface DbRow {
+  id?: string;
+  amount?: string | number;
+  description?: string;
+  title?: string;
+  date?: string;
+  due_date?: string;
+  category_id?: string;
+  category_name?: string;
+  category_color?: string;
+  category_icon?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = requireAuth(request);
@@ -164,7 +186,7 @@ export async function GET(request: NextRequest) {
       [user.userId, currentYear, currentMonth]
     );
     // transformar resultado de categorias (apenas com expenses) e somar valores de bills por categoria
-    const categoryStatsMap: Record<string, any> = {};
+    const categoryStatsMap: Record<string, CategoryStat> = {};
     for (const c of categoryStatsResult.rows) {
       categoryStatsMap[c.id] = {
         id: c.id,
@@ -203,7 +225,7 @@ export async function GET(request: NextRequest) {
       categoryStatsMap[catId].total += Number(b.total || 0);
       categoryStatsMap[catId].count += Number(b.count || 0);
     }
-    const categoryStats = Object.values(categoryStatsMap).sort((a: any, b: any) => b.total - a.total);
+    const categoryStats = Object.values(categoryStatsMap).sort((a: CategoryStat, b: CategoryStat) => b.total - a.total);
     
     const recentExpensesResult = await db.query(
       `SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
@@ -216,7 +238,7 @@ export async function GET(request: NextRequest) {
       LIMIT 10`,
       [user.userId, currentYear, currentMonth]
     );
-    const recentExpensesFromExpenses = recentExpensesResult.rows.map((e: any) => ({
+    const recentExpensesFromExpenses = recentExpensesResult.rows.map((e: DbRow) => ({
       id: e.id,
       type: 'expense',
       description: e.description,
@@ -239,7 +261,7 @@ export async function GET(request: NextRequest) {
        LIMIT 10`,
       [user.userId, currentYear, currentMonth]
     );
-    const recentExpensesFromBills = recentBillsResult.rows.map((b: any) => ({
+    const recentExpensesFromBills = recentBillsResult.rows.map((b: DbRow) => ({
       id: b.id,
       type: 'bill',
       description: b.description || b.title || '',
@@ -281,7 +303,7 @@ export async function GET(request: NextRequest) {
        AND EXTRACT(MONTH FROM due_date::date) = $3`,
       [user.userId, currentYear, currentMonth]
     );
-    const recurringBillsTotal = recurringBillsResult.rows.reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
+    const recurringBillsTotal = recurringBillsResult.rows.reduce((sum: number, row: DbRow) => sum + Number(row.amount || 0), 0);
     const recurringTotal = recurringTotalExpenses + recurringBillsTotal;
 
     const projectedMonthlyTotal = (dailyAverage * daysInMonth) + recurringTotal;
