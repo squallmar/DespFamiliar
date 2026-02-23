@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest) {
     const { id, month, amount, source, notes, recurring, recurring_type } = body;
     if (!id || !month || typeof amount !== 'number') return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     const db = await getDatabase();
-    await db.query('UPDATE incomes SET month=$1, amount=$2, source=$3, notes=$4, recurring=$7, recurring_type=$8, updated_at=NOW() WHERE id=$5 AND user_id=$6', [month, amount, source || null, notes || null, id, user.userId, recurring ? true : false, recurring_type || null]);
+    await db.query('UPDATE incomes SET month=$1, amount=$2, source=$3, notes=$4, recurring=$5, recurring_type=$6, updated_at=NOW() WHERE id=$7 AND user_id=$8', [month, amount, source || null, notes || null, recurring ? true : false, recurring_type || null, id, user.userId]);
     const res = await db.query('SELECT * FROM incomes WHERE id = $1', [id]);
     return NextResponse.json({ item: res.rows[0] });
   } catch (e: any) {

@@ -3,7 +3,11 @@ import { getDatabase } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || (
+  process.env.NODE_ENV === 'production'
+    ? (() => { throw new Error('JWT_SECRET environment variable is not set in production!'); })()
+    : 'dev-secret-key-only-for-local-development'
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,11 +58,8 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+      maxAge: 7 * 24 * 60 * 60 // 7 dias
     });
-
-    console.log('Tentando login para:', email, 'Encontrado:', !!user);
-    console.log('Senha correta?', isValidPassword);
 
     return response;
   } catch (error) {
