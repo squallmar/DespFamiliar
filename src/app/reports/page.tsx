@@ -384,7 +384,7 @@ export default function ReportsPage() {
         const json = await res.json();
         if (res.ok && json.history) {
           // history comes ordered desc; take last 6 and reverse for chart
-          const rows = json.history.map((r: any) => ({ month: r.month, total: Number(r.total) }));
+          const rows = json.history.map((r: { month: string; total: string | number }) => ({ month: r.month, total: Number(r.total) }));
           const last6 = rows.slice(0, 12).reverse();
           setIncomeHistory(last6);
         }

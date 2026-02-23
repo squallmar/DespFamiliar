@@ -17,6 +17,14 @@ interface User {
   achievements_count?: number;
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  months: number;
+  used?: boolean;
+  created_at?: string;
+}
+
 export default function AdminUsersPage() {
   const [showFormatModal, setShowFormatModal] = useState(false);
   const [formatConfirm, setFormatConfirm] = useState('');
@@ -30,7 +38,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
-  const [coupons, setCoupons] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [newCouponCode, setNewCouponCode] = useState('');
   const [newCouponMonths, setNewCouponMonths] = useState<number>(12);

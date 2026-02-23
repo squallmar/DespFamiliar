@@ -45,7 +45,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language }: QuickA
   const [submitting, setSubmitting] = useState(false);
   
   const langKey = resolveLanguage(language);
-  const t = (translations as Record<string, any>)[langKey] || translations['pt-BR'];
+  const t = (translations as Record<string, Record<string, unknown>>)[langKey] || translations['pt-BR'];
   const categoriesMap = (t?.categories ?? {}) as CategoryTranslation;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -202,7 +202,7 @@ function StatsCard({
 export default function Dashboard() {
   const { currency, language, loading: locationLoading } = useLocation();
   const langKey = resolveLanguage(language);
-  const t = (translations as Record<string, any>)[langKey] || translations['pt-BR'];
+  const t = (translations as Record<string, Record<string, unknown>>)[langKey] || translations['pt-BR'];
   const { categories, loading: categoriesLoading } = useCategories();
   const { createExpense } = useExpenses();
   

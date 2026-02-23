@@ -1,4 +1,4 @@
-const { getDatabase } = require('./src/lib/database');
+import { getDatabase } from './src/lib/database.js';
 
 async function initDb() {
   const db = await getDatabase();
