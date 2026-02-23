@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '@/lib/database';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+import { getJwtSecret } from '@/lib/auth';
 
 interface JWTPayload {
   userId: string;
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: 'Token não encontrado' }, { status: 401 });
     }
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JWTPayload;
     const db = await getDatabase();
   const userResult = await db.query('SELECT premium, admin, avatar, premium_expires_at FROM users WHERE id = $1', [decoded.userId]);
   const userDb = userResult.rows[0];
