@@ -3,8 +3,7 @@ import { getDatabase, insertDefaultCategories } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+import { getJwtSecret } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +42,7 @@ export async function POST(request: NextRequest) {
     await insertDefaultCategories(userId);
 
     // Gerar token JWT
-    const token = jwt.sign({ userId, email, name }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId, email, name }, getJwtSecret(), { expiresIn: '7d' });
 
     const response = NextResponse.json({
       user: { id: userId, name, email, premium: !!isAdmin, admin: !!isAdmin },
