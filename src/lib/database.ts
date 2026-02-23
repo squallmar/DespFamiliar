@@ -6,10 +6,11 @@ let pool: Pool | null = null;
 
 export async function getDatabase() {
   if (!pool) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
     pool = new Pool({
-      connectionString:
-        process.env.DATABASE_URL ||
-        'postgres://postgres:mM202038@@localhost:5432/despfamiliar',
+      connectionString: process.env.DATABASE_URL,
     });
 
     // =========================
