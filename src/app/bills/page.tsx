@@ -170,6 +170,7 @@ export default function BillsPage() {
 
       if (response.ok) {
         await fetchBills();
+        await fetchFutureExpenses();
         closeModal();
       }
     } catch (error) {
@@ -199,7 +200,14 @@ export default function BillsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...bill,
+          id: bill.id,
+          description: bill.description,
+          amount: bill.amount,
+          dueDate: bill.due_date,
+          categoryId: bill.category_id,
+          recurring: bill.recurring,
+          recurringType: bill.recurring_type,
+          notes: bill.notes,
           status: 'paid',
           paidDate: new Date().toISOString()
         })
@@ -207,6 +215,7 @@ export default function BillsPage() {
 
       if (response.ok) {
         await fetchBills();
+        await fetchFutureExpenses();
       }
     } catch (error) {
       console.error('Error marking bill as paid:', error);
