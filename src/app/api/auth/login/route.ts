@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'dev-secret-local' : '');
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required in production');
-}
+import { getJwtSecret } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +32,7 @@ export async function POST(request: NextRequest) {
     // Gerar token JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, name: user.name },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
