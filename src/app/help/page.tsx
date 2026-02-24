@@ -1,9 +1,44 @@
 'use client';
 
+import { useState } from 'react';
 import { CircleAlert, Clock, CircleCheck, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HelpPage() {
+  const { user } = useAuth();
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackEmail, setFeedbackEmail] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeedbackLoading(true);
+    setFeedbackError('');
+    setFeedbackSuccess(false);
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: feedbackMessage, email: feedbackEmail || user?.email || '', page: '/help' })
+      });
+      if (res.ok) {
+        setFeedbackSuccess(true);
+        setFeedbackMessage('');
+        setFeedbackEmail('');
+      } else {
+        const data = await res.json();
+        setFeedbackError(data.error || 'Erro ao enviar feedback.');
+      }
+    } catch {
+      setFeedbackError('Erro ao enviar feedback.');
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       
@@ -166,6 +201,63 @@ export default function HelpPage() {
             <li>• Passe o mouse sobre os badges coloridos para ver explicações rápidas</li>
             <li>• Os totais mostrados refletem apenas os itens filtrados na tela</li>
           </ul>
+        </div>
+
+        {/* Perfil do Usuário + Feedback */}
+        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+          <div className="flex items-center gap-4 mb-6">
+            {user ? (
+              <>
+                <div className="text-4xl w-14 h-14 flex items-center justify-center bg-blue-100 rounded-full">
+                  {user.avatar || '👤'}
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">{user.name}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="text-4xl w-14 h-14 flex items-center justify-center bg-gray-100 rounded-full">👤</div>
+                <p className="text-gray-500 text-sm">Faça login para identificar seu feedback</p>
+              </div>
+            )}
+          </div>
+
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Enviar Feedback</h3>
+          <p className="text-sm text-gray-500 mb-4">Encontrou um problema ou tem uma sugestão? Nos conte!</p>
+          <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+            <textarea
+              className="w-full border rounded p-2 min-h-[80px] focus:ring-2 focus:ring-blue-500"
+              placeholder="Descreva o problema ou sugestão..."
+              value={feedbackMessage}
+              onChange={e => setFeedbackMessage(e.target.value)}
+              required
+              minLength={5}
+              disabled={feedbackLoading}
+            />
+            {!user && (
+              <input
+                className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500"
+                type="email"
+                placeholder="Seu email (opcional)"
+                value={feedbackEmail}
+                onChange={e => setFeedbackEmail(e.target.value)}
+                disabled={feedbackLoading}
+              />
+            )}
+            {feedbackError && <div className="text-red-600 text-sm">{feedbackError}</div>}
+            {feedbackSuccess && <div className="text-green-600 text-sm">Feedback enviado com sucesso!</div>}
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded disabled:opacity-50 cursor-pointer"
+              disabled={feedbackLoading || !feedbackMessage.trim()}
+              aria-label={feedbackLoading ? 'Enviando feedback...' : 'Enviar Feedback'}
+              aria-busy={feedbackLoading}
+            >
+              {feedbackLoading ? 'Enviando...' : 'Enviar Feedback'}
+            </button>
+          </form>
         </div>
       </div>
     </div>

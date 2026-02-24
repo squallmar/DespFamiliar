@@ -4,7 +4,6 @@ import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
 import { LocationProvider } from "../contexts/LocationContext";
 import NavigationComponent from "../components/Navigation";
-import FeedbackClientWrapper from '../components/FeedbackClientWrapper';
 import { ToastProvider } from '../contexts/ToastContext';
 
 const geistSans = Geist({
@@ -35,8 +34,6 @@ export default function RootLayout({
             <ToastProvider>
               <NavigationComponent />
               {children}
-              {/* Botão global de feedback */}
-              <FeedbackClientWrapper />
             </ToastProvider>
           </AuthProvider>
         </LocationProvider>
