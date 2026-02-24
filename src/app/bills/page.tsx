@@ -87,7 +87,6 @@ export default function BillsPage() {
 
   const fetchBills = async () => {
     try {
-      setLoading(true);
       const response = await fetch(`/api/bills?status=${statusFilter}&month=${period.month}&year=${period.year}`);
       if (response.ok) {
         const data = await response.json();
@@ -102,8 +101,6 @@ export default function BillsPage() {
       }
     } catch (error) {
       console.error('Error fetching bills:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -121,14 +118,6 @@ export default function BillsPage() {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchBills();
-      fetchCategories();
-      fetchFutureExpenses();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, statusFilter, period]);
   const fetchFutureExpenses = async () => {
     try {
       const response = await fetch(`/api/expenses/future?month=${period.month}&year=${period.year}`);
@@ -141,6 +130,15 @@ export default function BillsPage() {
       setFutureExpenses([]);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      Promise.all([fetchBills(), fetchCategories(), fetchFutureExpenses()])
+        .finally(() => setLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, statusFilter, period]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
