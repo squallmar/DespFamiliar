@@ -12,13 +12,84 @@ export async function GET(request: NextRequest) {
   const month = searchParams.get('month');
   const year = searchParams.get('year');
 
+    if (month && year) {
+      // Use a CTE to project recurring bills into the requested month/year
+      const params: Array<string | number> = [user.userId, Number(month), Number(year)];
+      let paramIndex = 4;
+
+      let cteQuery = `
+        WITH projected AS (
+          SELECT
+            b.*,
+            CASE
+              WHEN b.recurring = true AND b.recurring_type = 'monthly'
+                   AND NOT (EXTRACT(MONTH FROM b.due_date) = $2 AND EXTRACT(YEAR FROM b.due_date) = $3)
+              -- Keep the same day-of-month, but cap to the last day of the target month
+              -- e.g. a bill due on Jan 31 projected to Feb becomes Feb 28/29
+              THEN MAKE_DATE($3::int, $2::int,
+                     LEAST(EXTRACT(DAY FROM b.due_date)::int,
+                           EXTRACT(DAY FROM (DATE_TRUNC('month', MAKE_DATE($3::int, $2::int, 1)) + INTERVAL '1 month' - INTERVAL '1 day'))::int
+                     ))::timestamp
+              WHEN b.recurring = true AND b.recurring_type = 'yearly'
+                   AND EXTRACT(MONTH FROM b.due_date) = $2
+                   AND EXTRACT(YEAR FROM b.due_date) < $3
+              THEN MAKE_DATE($3::int, $2::int, EXTRACT(DAY FROM b.due_date)::int)::timestamp
+              ELSE b.due_date
+            END AS projected_due_date,
+            CASE
+              WHEN b.recurring = true
+                   AND NOT (EXTRACT(MONTH FROM b.due_date) = $2 AND EXTRACT(YEAR FROM b.due_date) = $3)
+              THEN 'pending'::text
+              ELSE b.status
+            END AS effective_status
+          FROM bills b
+          WHERE b.user_id = $1
+            AND (
+              (EXTRACT(MONTH FROM b.due_date) = $2 AND EXTRACT(YEAR FROM b.due_date) = $3)
+              OR (b.recurring = true AND b.recurring_type = 'monthly'
+                  AND (EXTRACT(YEAR FROM b.due_date) < $3
+                       OR (EXTRACT(YEAR FROM b.due_date) = $3 AND EXTRACT(MONTH FROM b.due_date) < $2)))
+              OR (b.recurring = true AND b.recurring_type = 'yearly'
+                  AND EXTRACT(MONTH FROM b.due_date) = $2
+                  AND EXTRACT(YEAR FROM b.due_date) < $3)
+            )
+        )
+        SELECT p.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+        FROM projected p
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE 1=1
+      `;
+
+      if (status && status !== 'all') {
+        if (status === 'overdue') {
+          cteQuery += ` AND p.effective_status = 'pending' AND p.projected_due_date < NOW()`;
+        } else {
+          cteQuery += ` AND p.effective_status = $${paramIndex}`;
+          params.push(status);
+          paramIndex++;
+        }
+      }
+
+      cteQuery += ` ORDER BY p.projected_due_date ASC`;
+
+      const result = await db.query(cteQuery, params);
+
+      const rows = result.rows.map((row: Record<string, unknown>) => ({
+        ...row,
+        due_date: row.projected_due_date,
+        status: row.effective_status,
+      }));
+
+      return NextResponse.json(rows);
+    }
+
     let query = `
       SELECT b.*, c.name as category_name, c.color as category_color, c.icon as category_icon
       FROM bills b
       LEFT JOIN categories c ON b.category_id = c.id
       WHERE b.user_id = $1
     `;
-  const params: Array<string | number> = [user.userId];
+    const params: Array<string | number> = [user.userId];
 
     let paramIndex = 2;
     if (status && status !== 'all') {
@@ -29,11 +100,6 @@ export async function GET(request: NextRequest) {
         params.push(status);
         paramIndex++;
       }
-    }
-    if (month && year) {
-      query += ` AND EXTRACT(MONTH FROM b.due_date) = $${paramIndex} AND EXTRACT(YEAR FROM b.due_date) = $${paramIndex + 1}`;
-      params.push(Number(month), Number(year));
-      paramIndex += 2;
     }
 
     query += ` ORDER BY b.due_date ASC`;
