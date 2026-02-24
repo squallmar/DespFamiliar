@@ -140,7 +140,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language }: QuickA
           <option value="single">{t.singleExpense as string || 'Despesa única'}</option>
           <option value="monthly">{t.monthlyExpense as string || 'Mensal'}</option>
           <option value="weekly">{t.weeklyExpense as string || 'Semanal'}</option>
-          <option value="daily">{t.dailyExpense as string || 'Diária'}</option>
+          <option value="yearly">{t.yearlyExpense as string || 'Anual'}</option>
         </select>
         <button
           type="submit"
@@ -320,10 +320,7 @@ export default function Dashboard() {
       if (expense.recurrence && expense.recurrence !== 'single') {
         payload.recurring = true;
         
-        if (expense.recurrence === 'daily') {
-          // API does not support 'daily' recurringType; map to 'monthly' as a sensible default
-          payload.recurringType = 'monthly';
-        } else if (expense.recurrence === 'weekly') {
+        if (expense.recurrence === 'weekly') {
           payload.recurringType = 'weekly';
         } else if (expense.recurrence === 'monthly') {
           payload.recurringType = 'monthly';
