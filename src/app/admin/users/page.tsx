@@ -178,6 +178,7 @@ export default function AdminUsersPage() {
                   } finally {
                     setFormatting(false);
                     setFormatConfirm('');
+                    setShowFormatModal(false);
                   }
                 }}
                 className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer font-bold ${formatConfirm !== 'FORMATAR' || formatting ? 'opacity-50 cursor-not-allowed' : ''}`}
