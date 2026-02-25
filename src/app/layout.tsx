@@ -29,6 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
+      <head>
+        <meta name="color-scheme" content="light" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <LocationProvider>
           <AuthProvider>

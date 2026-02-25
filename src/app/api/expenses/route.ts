@@ -122,14 +122,14 @@ export async function POST(request: NextRequest) {
       // Se for recorrente, cria para todos os meses restantes do ano (ou semanas/anos)
       const startDate = date ? new Date(date) : new Date();
       if (recurringType === 'monthly') {
-        // Cria para todos os meses restantes do ano, incluindo o mês inicial
-        const year = startDate.getFullYear();
-        const month = startDate.getMonth(); // 0-based
-        const day = startDate.getDate();
-        for (let m = month; m < 12; m++) {
-          const safeDay = clampDay(year, m, day);
+        // Cria para os próximos 12 meses a partir da data de início
+        for (let i = 0; i < 12; i++) {
+          const targetYear = startDate.getFullYear() + Math.floor((startDate.getMonth() + i) / 12);
+          const targetMonth = (startDate.getMonth() + i) % 12; // 0-based
+          const day = startDate.getDate();
+          const safeDay = clampDay(targetYear, targetMonth, day);
           const expenseId = uuidv4();
-          const expenseDate = new Date(year, m, safeDay);
+          const expenseDate = new Date(targetYear, targetMonth, safeDay);
           await db.query(
             `INSERT INTO expenses (id, amount, description, category_id, date, user_id, recurring, recurring_type)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,

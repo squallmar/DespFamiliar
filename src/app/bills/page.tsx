@@ -1,5 +1,4 @@
  "use client";
-import { PiggyBank } from 'lucide-react';
 
 
 import { useEffect, useState } from 'react';
@@ -650,8 +649,8 @@ export default function BillsPage() {
                         {isBill(row) && row.recurring && translateRecurring(row.recurring_type) && (
                           <div className="text-xs text-gray-500">🔄 Recorrente ({translateRecurring(row.recurring_type)})</div>
                         )}
-                        {!isBill(row) && row.recurring && translateRecurring(row.recurringType) && (
-                          <div className="text-xs text-gray-500">🔄 Recorrente ({translateRecurring(row.recurringType)})</div>
+                        {!isBill(row) && row.recurring && translateRecurring(row.recurring_type ?? row.recurringType) && (
+                          <div className="text-xs text-gray-500">🔄 Recorrente ({translateRecurring(row.recurring_type ?? row.recurringType)})</div>
                         )}
                         {isExpense(row) && <div className="text-xs text-blue-500">Despesa</div>}
                         {isBill(row) && <div className="text-xs text-purple-500">Conta</div>}

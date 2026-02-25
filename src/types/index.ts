@@ -26,6 +26,8 @@ export interface Expense {
   userId: string;
   recurring?: boolean;
   recurringType?: 'monthly' | 'weekly' | 'yearly';
+  recurring_type?: string;
+  category_id?: string;
   tags?: string[];
   // Propriedades vindas do JOIN com categories na API
   category_name?: string;
