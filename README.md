@@ -1,25 +1,54 @@
-# 💰 Controle de Despesas Familiar
+# 💰 DespFamiliar - Controle de Despesas Familiar
 
-Uma aplicação moderna e completa para controle de despesas familiares com funcionalidades avançadas de projeção financeira e banco de dados integrado.
+[![Next.js](https://img.shields.io/badge/Next.js-15.0-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-3.0-003B57?style=flat&logo=sqlite)](https://www.sqlite.org/)
+
+Uma aplicação moderna e completa para controle de despesas familiares com funcionalidades avançadas de projeção financeira, sistema de conquistas gamificado, e banco de dados integrado.
+
+![Dashboard Preview](https://via.placeholder.com/800x400/4F46E5/ffffff?text=DespFamiliar+Dashboard)
 
 ## 🚀 Funcionalidades Implementadas
 
-### ✅ Sistema Completo
+### ✅ Sistema Completo de Gestão Financeira
 - **Dashboard Interativo**: Visão geral das finanças com dados reais do banco
 - **Gestão Completa de Despesas**: CRUD completo (Criar, Ler, Atualizar, Deletar)
+- **Gestão de Contas**: Controle de contas a pagar e receber com status e vencimentos
+- **Proventos (Receitas)**: Gerenciamento de fontes de renda mensais
+- **Membros da Família**: Atribua despesas a membros específicos da família
 - **Estatísticas em Tempo Real**: Comparação mensal, médias e projeções
-- **Banco de Dados SQLite**: Persistência completa de dados
-- **APIs REST**: Endpoints para todas as operações
-- **Navegação Intuitiva**: Sistema de navegação entre páginas
-- **Busca e Filtros**: Localização rápida de despesas por categoria ou descrição
+- **Busca e Filtros**: Localização rápida de despesas por categoria, membro ou descrição
 
 ### 🎯 Recursos Avançados
-- **Categorização Inteligente**: 8 categorias padrão com ícones e cores
-- **Despesas Recorrentes**: Suporte a gastos semanais, mensais e anuais  
+- **Sistema de Conquistas**: Gamificação com 10+ conquistas desbloqueáveis
+  - Notificações com som e confetti ao desbloquear
+  - Badge de notificações no menu
+  - Sistema de progresso e timestamps
 - **Projeções Financeiras**: Gráficos interativos e análise de tendências
-- **Interface Responsiva**: Funciona perfeitamente em desktop e mobile
-- **Validação Completa**: TypeScript em todo o projeto
-- **Atualizações em Tempo Real**: Dados sincronizados entre componentes
+  - Projeções de 1, 3, 6 e 12 meses
+  - Gráficos de linha e pizza
+  - Alertas de orçamento
+- **Relatórios Detalhados**: Análises por categoria, período e membro
+- **Multi-idioma**: Suporte para Português (BR), English (US), Español (ES)
+- **Multi-moeda**: BRL, USD, EUR
+- **Sistema de Autenticação**: Login, registro, recuperação de senha
+- **Painel Administrativo**: Gestão de usuários e feedbacks (para admins)
+- **Backup/Importação**: Exporte e importe seus dados em JSON
+
+### 🎨 Interface Moderna
+- **Design Responsivo**: Funciona perfeitamente em desktop, tablet e mobile
+- **Menu Mobile**: Hamburger menu com transições suaves
+- **Template Moderno**: Gradientes azul/índigo, animações sutis
+- **Destaque de Página Ativa**: Navegação clara e intuitiva
+- **Ícones Lucide**: Biblioteca de ícones moderna e consistente
+- **Tailwind CSS**: Estilização utilitária e customizável
+
+### 🔐 Segurança
+- **Autenticação por Sessão**: Cookies seguros httpOnly
+- **Rotas Protegidas**: Middleware para páginas privadas
+- **Hash de Senhas**: bcrypt para segurança de credenciais
+- **Reset de Senha**: Sistema completo de recuperação (com email opcional)
 
 ## 🛠️ Tecnologias
 
@@ -33,19 +62,56 @@ Uma aplicação moderna e completa para controle de despesas familiares com func
 
 ## 📦 Instalação e Uso
 
-1. **Clone e instale**:
+### Pré-requisitos
+- Node.js 18.x ou superior
+- npm ou yarn
+
+### Instalação
+
+1. **Clone o repositório**:
 ```bash
-git clone <seu-repositorio>
-cd desp2.0
+git clone https://github.com/squallmar/DespFamiliar.git
+cd DespFamiliar
+```
+
+2. **Instale as dependências**:
+```bash
 npm install
 ```
 
-2. **Execute a aplicação**:
+3. **Configure as variáveis de ambiente**:
+```bash
+cp .env.example .env
+# Edite o arquivo .env e configure SESSION_SECRET
+```
+
+4. **Inicialize o banco de dados**:
+```bash
+node init_db.js
+```
+
+5. **Execute a aplicação**:
 ```bash
 npm run dev
 ```
 
-3. **Acesse**: `http://localhost:3000`
+6. **Acesse**: `http://localhost:3000`
+
+### Primeiro Acesso
+
+1. Clique em "Registrar" e crie sua conta
+2. Faça login com suas credenciais
+3. Comece a adicionar suas despesas!
+
+### Criar Usuário Admin (Opcional)
+
+```bash
+# Usando o script TypeScript
+npm run create-admin
+
+# Ou diretamente
+node create_admin.ts
+```
 
 ## 🏗️ Comandos Disponíveis
 
@@ -102,6 +168,91 @@ npm run lint        # Verificação de código
 - `DELETE /api/expenses` - Excluir despesa
 
 ### Categorias
+- `GET /api/categories` - Listar categorias
+- `POST /api/categories` - Criar categoria
+
+### Estatísticas
+- `GET /api/stats` - Estatísticas gerais
+
+### Autenticação
+- `POST /api/auth/register` - Registro de usuário
+- `POST /api/auth/login` - Login
+- `POST /api/auth/logout` - Logout
+- `GET /api/auth/me` - Dados do usuário atual
+- `PUT /api/auth/profile` - Atualizar perfil
+
+### Contas/Bills
+- `GET /api/bills` - Listar contas
+- `POST /api/bills` - Criar conta
+- `PUT /api/bills` - Atualizar conta
+- `DELETE /api/bills` - Excluir conta
+
+### Conquistas
+- `GET /api/achievements` - Listar conquistas do usuário
+
+### Relatórios
+- `GET /api/reports` - Gerar relatórios
+- `GET /api/reports/summary` - Resumo de relatórios
+
+### Admin (apenas para administradores)
+- `GET /api/admin/users` - Gerenciar usuários
+- `GET /api/admin/feedbacks` - Ver feedbacks
+
+## 📸 Screenshots
+
+| Dashboard | Projeções | Conquistas |
+|-----------|-----------|------------|
+| ![Dashboard](https://via.placeholder.com/300x200/4F46E5/ffffff?text=Dashboard) | ![Projections](https://via.placeholder.com/300x200/10B981/ffffff?text=Projections) | ![Achievements](https://via.placeholder.com/300x200/F59E0B/ffffff?text=Achievements) |
+
+| Contas | Membros da Família | Relatórios |
+|--------|-------------------|------------|
+| ![Bills](https://via.placeholder.com/300x200/EF4444/ffffff?text=Bills) | ![Family](https://via.placeholder.com/300x200/8B5CF6/ffffff?text=Family) | ![Reports](https://via.placeholder.com/300x200/06B6D4/ffffff?text=Reports) |
+
+## 🎯 Roadmap
+
+- [ ] Integração com bancos (Open Banking)
+- [ ] App mobile nativo (React Native)
+- [ ] Cloud sync entre dispositivos
+- [ ] Importação de extratos bancários (OFX, CSV)
+- [ ] OCR para leitura de notas fiscais
+- [ ] Notificações push de vencimentos
+- [ ] Dashboard analítico avançado com BI
+- [ ] Sistema de tags personalizadas
+- [ ] Modo escuro (Dark mode)
+- [ ] Exportação para PDF/Excel
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para:
+
+1. Fazer um Fork do projeto
+2. Criar uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
+5. Abrir um Pull Request
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 👨‍💻 Autor
+
+**Marcel (squallmar)**
+- GitHub: [@squallmar](https://github.com/squallmar)
+- Projeto: [DespFamiliar](https://github.com/squallmar/DespFamiliar)
+
+## 🙏 Agradecimentos
+
+- Next.js team pela framework incrível
+- Tailwind CSS pela experiência de desenvolvimento
+- Lucide pela biblioteca de ícones
+- Recharts pelos gráficos interativos
+
+---
+
+⭐ Se você gostou deste projeto, considere dar uma estrela no GitHub!
+
+📧 Dúvidas? Abra uma [issue](https://github.com/squallmar/DespFamiliar/issues)!
 - `GET /api/categories` - Listar categorias
 - `POST /api/categories` - Criar categoria
 
