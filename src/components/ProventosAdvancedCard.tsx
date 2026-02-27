@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { PiggyBank, TrendingUp, TrendingDown, Plus, Edit2, Trash2, Briefcase, LineChart as LineChartIcon, Wallet, Gift, Target, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { PiggyBank, TrendingUp, TrendingDown, Plus, Edit2, Trash2, Briefcase, LineChart as LineChartIcon, Wallet, Gift, Target, AlertCircle, User } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useLocation } from '@/contexts/LocationContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useFamilyMembers } from '@/hooks/useFamilyMembers';
 
 interface ProventosSource {
   id: string;
@@ -11,6 +13,7 @@ interface ProventosSource {
   amount: number;
   type: 'salary' | 'freelance' | 'investment' | 'gift' | 'other';
   recurring: boolean;
+  memberId?: string;
 }
 
 interface ProventosAdvancedCardProps {
@@ -49,47 +52,154 @@ function getStorageKey(period: { month: number; year: number }) {
 
 export default function ProventosAdvancedCard({ period, totalExpenses, onTotalChange }: ProventosAdvancedCardProps) {
   const { language, currency } = useLocation();
+  const { user } = useAuth();
+  const { members: familyMembers } = useFamilyMembers();
   const formatCurrency = (value: number) => new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
+  const monthKey = `${period.year}-${String(period.month).padStart(2, '0')}`;
 
   const [sources, setSources] = useState<ProventosSource[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSource, setEditingSource] = useState<ProventosSource | null>(null);
+  const [incomeId, setIncomeId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
     type: 'salary' as ProventosSource['type'],
-    recurring: false
+    recurring: false,
+    memberId: ''
   });
   const [showHistory, setShowHistory] = useState(false);
+  const didInitRef = useRef(false);
 
-  // Carregar fontes do localStorage
+  const parseSourcesFromNotes = (notes?: string | null): ProventosSource[] | null => {
+    if (!notes) return null;
+    try {
+      const parsed = JSON.parse(notes);
+      if (Array.isArray(parsed?.sources)) {
+        return parsed.sources as ProventosSource[];
+      }
+      if (Array.isArray(parsed?.items)) {
+        const items = parsed.items as Array<{ label?: string; amount?: number }>;
+        return items.map((item, idx) => {
+          const rawLabel = (item.label || '').toLowerCase();
+          let type: ProventosSource['type'] = 'other';
+          if (rawLabel.includes('sal')) type = 'salary';
+          else if (rawLabel.includes('extra') || rawLabel.includes('free')) type = 'freelance';
+          else if (rawLabel.includes('invest')) type = 'investment';
+          else if (rawLabel.includes('pres') || rawLabel.includes('bonus')) type = 'gift';
+
+          return {
+            id: `import-${idx}`,
+            name: item.label || SOURCE_LABELS[type],
+            amount: Number(item.amount) || 0,
+            type,
+            recurring: false
+          };
+        });
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  };
+
+  // Carregar fontes do servidor (se logado) e fallback para localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const key = getStorageKey(period);
-      const saved = window.localStorage.getItem(key);
-      if (saved) {
+    const load = async () => {
+      setIncomeId(null);
+      if (user?.id) {
         try {
-          setSources(JSON.parse(saved));
-        } catch {
+          const res = await fetch(`/api/incomes?month=${monthKey}`, { credentials: 'include' });
+          const json = await res.json();
+          if (res.ok && Array.isArray(json.items) && json.items.length > 0) {
+            const item = json.items[0];
+            const parsedSources = parseSourcesFromNotes(item.notes);
+            if (parsedSources && parsedSources.length > 0) {
+              setSources(parsedSources);
+            } else if (Number(item.amount) > 0) {
+              setSources([{
+                id: 'income-total',
+                name: 'Renda',
+                amount: Number(item.amount),
+                type: 'salary',
+                recurring: false
+              }]);
+            } else {
+              setSources([]);
+            }
+            setIncomeId(item.id);
+            didInitRef.current = true;
+            return;
+          }
+        } catch (e) {
+          console.error('Erro ao carregar proventos:', e);
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        const key = getStorageKey(period);
+        const saved = window.localStorage.getItem(key);
+        if (saved) {
+          try {
+            setSources(JSON.parse(saved));
+          } catch {
+            setSources([]);
+          }
+        } else {
           setSources([]);
         }
-      } else {
-        setSources([]);
       }
-    }
-  }, [period]);
+      didInitRef.current = true;
+    };
 
-  // Salvar fontes no localStorage
+    load();
+  }, [period, user?.id, monthKey]);
+
+  // Salvar fontes no localStorage e no servidor quando logado
   useEffect(() => {
+    if (!didInitRef.current) return;
+
     if (typeof window !== 'undefined' && sources.length >= 0) {
       const key = getStorageKey(period);
       window.localStorage.setItem(key, JSON.stringify(sources));
-      
-      // Notificar mudança do total
+
+      // Notificar mudanca do total
       const total = sources.reduce((sum, s) => sum + s.amount, 0);
       onTotalChange?.(total);
     }
-  }, [sources, period, onTotalChange]);
+
+    const persist = async () => {
+      if (!user?.id) return;
+      try {
+        const total = sources.reduce((sum, s) => sum + s.amount, 0);
+        const notes = JSON.stringify({ sources });
+        if (incomeId) {
+          await fetch('/api/incomes', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: incomeId, month: monthKey, amount: total, notes })
+          });
+        } else {
+          const res = await fetch('/api/incomes', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month: monthKey, amount: total, notes })
+          });
+          const json = await res.json();
+          if (res.ok && json?.item?.id) {
+            setIncomeId(json.item.id);
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao salvar proventos:', e);
+      }
+    };
+
+    persist();
+  }, [sources, period, onTotalChange, user?.id, incomeId, monthKey]);
 
   // Histórico dos últimos 6 meses
   const history = useMemo(() => {
@@ -163,7 +273,8 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
       name: formData.name,
       amount: parseFloat(formData.amount),
       type: formData.type,
-      recurring: formData.recurring
+      recurring: formData.recurring,
+      memberId: formData.memberId || undefined
     };
 
     if (editingSource) {
@@ -173,7 +284,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
       setSources([...sources, newSource]);
     }
 
-    setFormData({ name: '', amount: '', type: 'salary', recurring: false });
+    setFormData({ name: '', amount: '', type: 'salary', recurring: false, memberId: '' });
     setShowAddForm(false);
   };
 
@@ -183,7 +294,8 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
       name: source.name,
       amount: source.amount.toString(),
       type: source.type,
-      recurring: source.recurring
+      recurring: source.recurring,
+      memberId: source.memberId || ''
     });
     setShowAddForm(true);
   };
@@ -194,7 +306,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
 
   const cancelEdit = () => {
     setEditingSource(null);
-    setFormData({ name: '', amount: '', type: 'salary', recurring: false });
+    setFormData({ name: '', amount: '', type: 'salary', recurring: false, memberId: '' });
     setShowAddForm(false);
   };
 
@@ -403,6 +515,19 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">De quem é a renda?</label>
+                <select
+                  value={formData.memberId}
+                  onChange={(e) => setFormData({ ...formData, memberId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:outline-none"
+                >
+                  <option value="">Selecione um membro (opcional)</option>
+                  {familyMembers.map(member => (
+                    <option key={member.id} value={member.id}>{member.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="flex items-center">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -444,6 +569,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
             {sources.map((source) => {
               const Icon = SOURCE_ICONS[source.type];
               const colorClass = SOURCE_COLORS[source.type];
+              const member = source.memberId ? familyMembers.find(m => m.id === source.memberId) : null;
               
               return (
                 <div key={source.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
@@ -452,8 +578,14 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                       <Icon className="text-white" size={20} />
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-gray-800">{source.name}</p>
+                        {member && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded flex items-center gap-1">
+                            <User size={12} />
+                            {member.name}
+                          </span>
+                        )}
                         {source.recurring && (
                           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Recorrente</span>
                         )}

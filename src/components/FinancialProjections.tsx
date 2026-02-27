@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Calendar, Target, DollarSign } from 'lucide-react';
+import { TrendingUp, Calendar, Target, DollarSign, Wallet, TrendingDown } from 'lucide-react';
 
 import { useLocation } from '@/contexts/LocationContext';
 import translations, { resolveLanguage } from '@/lib/translations';
@@ -12,6 +12,14 @@ type ReportsResponse = {
   dailyTotals: { day: string; total: number | string }[];
   monthlyTotals: { ym: string; total: number | string }[];
 };
+
+interface IncomeItem {
+  id: string;
+  month: string;
+  amount?: number;
+  total?: number;
+  notes?: string;
+}
 
 // Simple linear regression y = a + b*x
 function linearRegression(y: number[]) {
@@ -70,6 +78,32 @@ function ProjectionCard({ title, amount, change, icon: Icon, color }: Projection
   );
 }
 
+function SavingsRateCard({ title, rate, icon: Icon, color }: { title: string; rate: number; icon: React.ComponentType<{ size?: number; className?: string }>; color: string }) {
+  const progressColor = rate >= 20 ? 'bg-green-500' : rate >= 10 ? 'bg-yellow-500' : 'bg-orange-500';
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-full ${color}`}>
+          <Icon className="text-white" size={24} />
+        </div>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
+      <div className="mb-3">
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className={`h-2 rounded-full ${progressColor}`}
+            style={{ width: `${Math.min(Math.abs(rate), 100)}%` }}
+          />
+        </div>
+      </div>
+      <p className="text-2xl font-bold text-gray-900">{rate.toFixed(1)}%</p>
+      <p className="text-xs text-gray-500 mt-2">
+        {rate >= 20 ? '✓ Excelente' : rate >= 10 ? '◐ Bom' : '⚠ Precisa melhorar'}
+      </p>
+    </div>
+  );
+}
+
 export default function FinancialProjections() {
   // Time range state must be declared first since it's used in other hooks
   const [timeRange, setTimeRange] = useState('1month');
@@ -83,11 +117,13 @@ export default function FinancialProjections() {
 
   // Data state
   const [reports, setReports] = useState<ReportsResponse | null>(null);
+  const [incomeHistory, setIncomeHistory] = useState<IncomeItem[]>([]);
+  const [currentIncome, setCurrentIncome] = useState<number>(0);
   const [projectedThisMonth, setProjectedThisMonth] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch reports (last 12 months) and stats (this month projection)
+  // Fetch reports (last 12 months), stats (this month projection), and income data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -107,6 +143,19 @@ export default function FinancialProjections() {
         const statsJson = await statsRes.json();
         if (!statsRes.ok) throw new Error(statsJson.error || 'Falha ao carregar projeção');
         setProjectedThisMonth(Number(statsJson.projectedMonthlyTotal || 0));
+
+        // Fetch income data for the last 12 months
+        const incomeRes = await fetch('/api/incomes', { credentials: 'include' });
+        const incomeJson = await incomeRes.json();
+        if (incomeRes.ok && Array.isArray(incomeJson.history)) {
+          setIncomeHistory(incomeJson.history);
+          
+          // Get current month income
+          const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+          const currentMonthIncome = incomeJson.history.find((item: IncomeItem) => item.month === currentMonthKey);
+          const currentAmount = currentMonthIncome ? Number(currentMonthIncome.total ?? currentMonthIncome.amount) : 0;
+          setCurrentIncome(currentAmount || 0);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao carregar projeções');
       } finally {
@@ -116,35 +165,68 @@ export default function FinancialProjections() {
     fetchData();
   }, []);
 
-  // Build historical series and forecast
-  const { chartData, avgLast3, sumProjectedPeriod } = useMemo(() => {
-    if (!reports) return { chartData: [], avgLast3: 0, sumProjectedPeriod: 0 };
+  // Build historical series and forecast with income data
+  const { chartData, avgLast3, sumProjectedPeriod, incomeByMonth } = useMemo(() => {
+    if (!reports) return { chartData: [], avgLast3: 0, sumProjectedPeriod: 0, incomeByMonth: new Map<string, number>() };
+    
+    // Map income history by month key
+    const incomeMap = new Map<string, number>();
+    incomeHistory.forEach(item => {
+      incomeMap.set(item.month, Number(item.total ?? item.amount) || 0);
+    });
+    
     const monthly = [...reports.monthlyTotals].sort((a, b) => (a.ym < b.ym ? -1 : 1));
     const y = monthly.map(m => Number(m.total));
     const labels = monthly.map(m => ymLabel(m.ym, language));
-    const hist = labels.map((label, i) => ({ month: label, trend: y[i] }));
+    const hist = labels.map((label, i) => {
+      const ym = monthly[i].ym;
+      return {
+        month: label,
+        ym,
+        expenses: y[i],
+        income: incomeMap.get(ym) || 0,
+        trend: y[i]
+      };
+    });
 
-    // Regression to forecast next N months
+    // Regression to forecast next N months (expenses)
     const n = y.length;
     const { a, b } = linearRegression(y);
     const count = timeRange === '1month' ? 1 : timeRange === '3months' ? 3 : timeRange === '12months' ? 12 : 6;
     const lastYm = monthly.length ? monthly[monthly.length - 1].ym : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    
+    // Calculate average income from history, or use current income as default
+    const incomeValues = Array.from(incomeMap.values()).filter(v => v > 0);
+    const avgIncome = incomeValues.length > 0 
+      ? incomeValues.reduce((sum, v) => sum + v, 0) / incomeValues.length 
+      : currentIncome;
+    
     const future = Array.from({ length: count }, (_, i) => {
       const x = n + i;
       const val = Math.max(0, a + b * x);
       const ym = addMonths(lastYm, i + 1);
-      return { month: ymLabel(ym, language), projected: val };
+      // Use historical income if available, otherwise use average or current income
+      const projectedIncome = incomeMap.get(ym) || avgIncome || 0;
+      return {
+        month: ymLabel(ym, language),
+        ym,
+        projected: val,
+        income: projectedIncome
+      };
     });
     const futureValues = future.map(f => f.projected as number);
     const periodSum = futureValues.reduce((acc, v) => acc + v, 0);
 
-    // Merge: past with trend, future with projected
-    const data = [...hist, ...future];
+    // Merge: past with expenses/income, future with projected expenses/income
+    const data = [
+      ...hist,
+      ...future.map(f => ({ month: f.month, expenses: f.projected, income: f.income, trend: f.projected }))
+    ];
 
     const last3 = y.slice(-3);
     const avg3 = last3.length ? last3.reduce((acc, v) => acc + v, 0) / last3.length : 0;
-    return { chartData: data, avgLast3: avg3, sumProjectedPeriod: periodSum };
-  }, [reports, timeRange, language]);
+    return { chartData: data, avgLast3: avg3, sumProjectedPeriod: periodSum, incomeByMonth: incomeMap };
+  }, [reports, incomeHistory, timeRange, language, currentIncome]);
 
   // Pie data from totalsByCategory (current window of reports range)
   const pieData = useMemo(() => {
@@ -169,9 +251,15 @@ export default function FinancialProjections() {
   const expectedSavingsAmount = baselineTotal - projectedSpendingAmount; // positive means saving vs baseline
   const expectedSavingsChange = baselineTotal > 0 ? (expectedSavingsAmount / baselineTotal) * 100 : 0;
 
+  // Income and balance calculations
+  const totalIncome = currentIncome || 0;
+  const netBalance = totalIncome - projectedSpendingAmount;
+  const savingsRate = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0;
+  const netBalanceChange = totalIncome > 0 ? ((netBalance - (totalIncome - baselineTotal)) / (totalIncome - baselineTotal)) * 100 : 0;
+
   // Balance calculations (difference vs baseline)
-  const balanceAmount = expectedSavingsAmount;
-  const balanceChange = expectedSavingsChange;
+  const balanceAmount = netBalance;
+  const balanceChange = netBalanceChange;
 
   const periodLabel = timeRange === '1month' ? 'Próximo mês' : timeRange === '3months' ? t.next3 : timeRange === '6months' ? t.next6 : t.next12;
   const projectedTitle = `${(t.projectedSpending?.split('(')?.[0] || 'Gastos Projetados').trim()} (${periodLabel})`;
@@ -210,42 +298,48 @@ export default function FinancialProjections() {
         </div>
 
         {/* Cards de Projeção */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <ProjectionCard
+            title="Receita Total"
+            amount={totalIncome}
+            change={0}
+            icon={Wallet}
+            color="bg-emerald-500"
+          />
           <ProjectionCard
             title={projectedTitle}
             amount={projectedSpendingAmount}
             change={projectedSpendingChange}
-            icon={TrendingUp}
+            icon={TrendingDown}
+            color="bg-red-500"
+          />
+          <ProjectionCard
+            title="Saldo Líquido"
+            amount={balanceAmount}
+            change={balanceChange}
+            icon={DollarSign}
+            color={balanceAmount >= 0 ? "bg-green-500" : "bg-orange-500"}
+          />
+          <SavingsRateCard
+            title="Taxa de Poupança"
+            rate={savingsRate}
+            icon={Target}
             color="bg-blue-500"
           />
           <ProjectionCard
             title={t.expectedSavings}
             amount={expectedSavingsAmount}
             change={expectedSavingsChange}
-            icon={DollarSign}
-            color="bg-red-500"
-          />
-          <ProjectionCard
-            title={t.targetSavings || 'Meta de Economia'}
-            amount={500}
-            change={0}
-            icon={Target}
-            color="bg-green-500"
-          />
-          <ProjectionCard
-            title={t.balance || 'Déficit/Superávit'}
-            amount={balanceAmount}
-            change={balanceChange}
             icon={Calendar}
-            color="bg-orange-500"
+            color="bg-purple-500"
           />
         </div>
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Histórico vs Projeção */}
+          {/* Histórico vs Projeção com Receita */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{t.historyVsProjection || 'Histórico vs Projeção de Gastos'}</h3>
+            <h3 className="text-lg font-semibold mb-4">{t.historyVsProjection || 'Receita vs Despesa'}</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData} margin={{ left: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -255,18 +349,25 @@ export default function FinancialProjections() {
                 <Legend />
                 <Line 
                   type="monotone" 
-                  dataKey="projected" 
-                  stroke="#8884d8" 
+                  dataKey="income" 
+                  stroke="#10b981" 
                   strokeWidth={2}
-                  name={t.projected || 'Projetado'}
-                  strokeDasharray="5 5"
+                  name="Receita"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="expenses" 
+                  stroke="#ef4444" 
+                  strokeWidth={2}
+                  name="Despesas"
                 />
                 <Line 
                   type="monotone" 
                   dataKey="trend" 
-                  stroke="#82ca9d" 
-                  strokeWidth={2}
-                  name={t.trendBased || 'Baseado na Tendência'}
+                  stroke="#8884d8" 
+                  strokeWidth={1}
+                  name={t.trendBased || 'Tendência'}
+                  strokeDasharray="5 5"
                 />
               </LineChart>
             </ResponsiveContainer>

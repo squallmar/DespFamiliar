@@ -13,12 +13,30 @@ export default function IncomePage() {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear()
   });
+  const [totalExpenses, setTotalExpenses] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    const fetchExpensesTotal = async () => {
+      if (!user) return;
+      try {
+        const res = await fetch(`/api/stats?year=${currentPeriod.year}&month=${currentPeriod.month}`, { credentials: 'include' });
+        const json = await res.json();
+        if (res.ok) {
+          setTotalExpenses(Number(json.totalThisMonth || 0));
+        }
+      } catch (error) {
+        console.error('Erro ao buscar despesas do mes:', error);
+      }
+    };
+
+    fetchExpensesTotal();
+  }, [user, currentPeriod.year, currentPeriod.month]);
 
   // Salvar proventos no localStorage
   const handleProventosChange = (value: number) => {
@@ -47,7 +65,7 @@ export default function IncomePage() {
         {/* Componente Avançado de Proventos */}
         <ProventosAdvancedCard 
           period={currentPeriod} 
-          totalExpenses={0}
+          totalExpenses={totalExpenses}
           onTotalChange={handleProventosChange}
         />
       </div>

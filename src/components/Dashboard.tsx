@@ -515,23 +515,45 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {alerts.map((a: AlertItem, idx) => (
                   <div key={idx} className="text-sm text-orange-900 flex items-center justify-between bg-white/80 rounded-lg px-4 py-3 border border-orange-100 hover:bg-white transition">
-                    {a.type === 'budget' ? (
+                    {a.type === 'budget' && (
                       <>
                         <span className="font-medium">
-                          {language.includes('en') ? 'Category' : 'Categoria'}: 
+                          {language.includes('en') ? 'Category' : language.includes('es') ? 'Categoria' : 'Categoria'}:
                           <strong className="ml-1">{a.categoryName}</strong>
                         </span>
                         <span className="ml-2 font-semibold text-red-600">
-                          {a.percentage ? `${a.percentage.toFixed(1)}%` : 'limite'}
+                          {Number.isFinite(a.usage) ? `${(a.usage * 100).toFixed(1)}%` : 'limite'}
                         </span>
                       </>
-                    ) : (
+                    )}
+                    {a.type === 'spike' && (
                       <>
-                        <span>
-                          {language.includes('en') ? 'Goal' : 'Meta'}: 
-                          <strong className="ml-1">{a.goalName}</strong>
+                        <span className="font-medium">
+                          {language.includes('en') ? 'Spending spike' : language.includes('es') ? 'Pico de gastos' : 'Pico de gastos'}:
+                          <strong className="ml-1">
+                            {a.message || (language.includes('en')
+                              ? 'Last day above daily average'
+                              : language.includes('es')
+                                ? 'Ultimo dia por encima de la media diaria'
+                                : 'Ultimo dia acima da media diaria')}
+                          </strong>
                         </span>
-                        <span className="ml-2 text-green-600 font-semibold">({a.daysLeft} dias)</span>
+                        <span className="ml-2 font-semibold text-red-600">
+                          {formatCurrency(a.lastDayTotal)} / {formatCurrency(a.dailyAvg)}
+                        </span>
+                      </>
+                    )}
+                    {a.type === 'bill' && (
+                      <>
+                        <span className="font-medium">
+                          {language.includes('en') ? 'Bill' : language.includes('es') ? 'Cuenta' : 'Conta'}:
+                          <strong className="ml-1">{a.description}</strong>
+                        </span>
+                        <span className={`ml-2 font-semibold ${a.isOverdue ? 'text-red-600' : a.daysUntilDue <= 3 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {a.isOverdue
+                            ? (language.includes('en') ? 'Overdue' : language.includes('es') ? 'Atrasada' : 'Atrasada')
+                            : (language.includes('en') ? `Due in ${a.daysUntilDue} days` : language.includes('es') ? `Vence en ${a.daysUntilDue} dias` : `Vence em ${a.daysUntilDue} dias`)}
+                        </span>
                       </>
                     )}
                   </div>
