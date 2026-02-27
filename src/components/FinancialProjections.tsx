@@ -326,6 +326,54 @@ export default function FinancialProjections() {
       .filter(c => c.value > 0); // Filtrar apenas categorias com valor > 0
   }, [reports, categoriesMap, sumProjectedPeriod]);
 
+  // Annual projection calculation
+  const annualProjection = useMemo(() => {
+    if (!reports || !reports.totalsByCategory) return { recurring: 0, variable: 0, total: 0, byCategory: [] };
+    
+    // Calculate monthly average for last 3 months
+    const monthlyTotals = reports.monthlyTotals || [];
+    const last3Months = monthlyTotals.slice(-3);
+    const avgMonthly = last3Months.length > 0
+      ? last3Months.reduce((sum, m) => sum + Number(m.total || 0), 0) / last3Months.length
+      : 0;
+    
+    // Calculate annual total (average monthly * 12)
+    const annualTotal = avgMonthly * 12;
+    
+    // Break down by category
+    const categoryBreakdown = reports.totalsByCategory
+      .map(cat => {
+        const monthlyAvg = Number(cat.total || 0) / Math.max(monthlyTotals.length, 1);
+        const yearlyProjection = monthlyAvg * 12;
+        return {
+          name: categoriesMap[cat.name] || cat.name,
+          originalName: cat.name,
+          monthlyAvg,
+          yearlyProjection,
+          color: cat.color
+        };
+      })
+      .filter(c => c.yearlyProjection > 0)
+      .sort((a, b) => b.yearlyProjection - a.yearlyProjection);
+    
+    // Try to identify recurring vs variable expenses
+    // Recurring categories typically include: housing, utilities, subscriptions, insurance
+    const recurringCategories = ['moradia', 'condomínio', 'aluguel', 'água', 'luz', 'energia', 'internet', 'telefone', 'assinaturas', 'seguros', 'saúde', 'educação'];
+    
+    const recurring = categoryBreakdown
+      .filter(c => recurringCategories.some(rc => c.originalName.toLowerCase().includes(rc)))
+      .reduce((sum, c) => sum + c.yearlyProjection, 0);
+    
+    const variable = annualTotal - recurring;
+    
+    return {
+      recurring,
+      variable,
+      total: annualTotal,
+      byCategory: categoryBreakdown
+    };
+  }, [reports, categoriesMap]);
+
   // Cards computations
   const rangeCount = timeRange === '3months' ? 3 : timeRange === '12months' ? 12 : 6;
   const baselineTotal = avgLast3 * rangeCount; // baseline = average last 3 months times range
@@ -712,6 +760,90 @@ export default function FinancialProjections() {
                   <div className="text-4xl mb-3">🎯</div>
                   <p className="text-gray-700 font-medium">{t.noGoalsCreated || 'Nenhuma meta criada ainda'}</p>
                   <p className="text-sm text-gray-500 mt-2">{t.createGoalToTrack || 'Crie uma meta para começar a acompanhar seu progresso'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Annual Projection Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-lg font-semibold">{t.annualProjectionTitle || 'Projeção Anual'}</h3>
+            <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
+            <div className="absolute top-6 left-0 mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
+              {t.annualProjectionTooltip || 'Projeção de quanto você gastará em um ano considerando despesas fixas (contas) e variáveis (alimentação, lazer, etc.).'}
+              <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">{t.annualProjectionSubtitle || 'Impacto anual das despesas mensais'}</p>
+          
+          {/* Annual Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 bg-blue-500 rounded-full">
+                  <TrendingDown className="text-white" size={16} />
+                </div>
+                <p className="text-sm font-medium text-blue-900">{t.recurringExpenses || 'Recorrentes'}</p>
+              </div>
+              <p className="text-2xl font-bold text-blue-900">{formatCurrency(annualProjection.recurring)}</p>
+              <p className="text-xs text-blue-700 mt-1">{t.perYear || 'por ano'}</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 bg-orange-500 rounded-full">
+                  <TrendingUp className="text-white" size={16} />
+                </div>
+                <p className="text-sm font-medium text-orange-900">{t.variableExpenses || 'Variáveis'}</p>
+              </div>
+              <p className="text-2xl font-bold text-orange-900">{formatCurrency(annualProjection.variable)}</p>
+              <p className="text-xs text-orange-700 mt-1">{t.perYear || 'por ano'}</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 bg-purple-500 rounded-full">
+                  <DollarSign className="text-white" size={16} />
+                </div>
+                <p className="text-sm font-medium text-purple-900">{t.yearlyTotal || 'Total Anual'}</p>
+              </div>
+              <p className="text-2xl font-bold text-purple-900">{formatCurrency(annualProjection.total)}</p>
+              <p className="text-xs text-purple-700 mt-1">{t.perYear || 'por ano'}</p>
+            </div>
+          </div>
+
+          {/* Annual Breakdown by Category */}
+          <div>
+            <h4 className="text-md font-semibold text-gray-700 mb-3">{t.annualByCategory || 'Impacto Anual por Categoria'}</h4>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {annualProjection.byCategory.length > 0 ? (
+                annualProjection.byCategory.map((cat, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: cat.color || '#6b7280' }}
+                      ></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{cat.name}</p>
+                        <p className="text-xs text-gray-600">
+                          {formatCurrency(cat.monthlyAvg)} {t.monthlyAverage || 'média mensal'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">{formatCurrency(cat.yearlyProjection)}</p>
+                      <p className="text-xs text-gray-500">{t.perYear || 'por ano'}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 px-4">
+                  <div className="text-4xl mb-3">📊</div>
+                  <p className="text-gray-700 font-medium">{t.noExpensesYet || 'Nenhuma despesa cadastrada ainda'}</p>
+                  <p className="text-sm text-gray-500 mt-2">{t.noExpenses || 'Adicione despesas para ver a projeção anual'}</p>
                 </div>
               )}
             </div>
