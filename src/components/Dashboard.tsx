@@ -635,27 +635,40 @@ export default function Dashboard() {
                 </h3>
                 <div className="space-y-4">
                   {displayRecent && displayRecent.length > 0 ? (
-                    displayRecent.slice(0, 6).map((expense: Expense) => (
-                      <div key={expense.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                        <div className="flex items-center">
-                          <span className="text-xl mr-3">{expense.category_icon || '💰'}</span>
-                          <div>
-                            <span className="font-medium">{expense.description}</span>
-                            <div className="text-sm text-gray-500">
-                              {categoriesMap[expense.category_name || ''] || expense.category_name || ''}
+                    displayRecent.slice(0, 6).map((expense: Expense) => {
+                      const spender = familyMembers.find(m => m.id === expense.spentBy);
+                      const payer = familyMembers.find(m => m.id === expense.paidBy);
+                      
+                      return (
+                        <div key={expense.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                          <div className="flex items-center flex-1">
+                            <span className="text-xl mr-3">{expense.category_icon || '💰'}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{expense.description}</span>
+                                {spender && (
+                                  <span className="text-sm text-gray-600 flex items-center gap-1">
+                                    <span className="text-base">{spender.avatar || '👤'}</span>
+                                    <span>{spender.name}</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {categoriesMap[expense.category_name || ''] || expense.category_name || ''}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-semibold text-red-600">
+                              {formatCurrency(expense.amount || 0)}
+                            </span>
+                            <div className="text-xs text-gray-500">
+                              {formatDate(expense.date)}
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="font-semibold text-red-600">
-                            {formatCurrency(expense.amount || 0)}
-                          </span>
-                          <div className="text-xs text-gray-500">
-                            {formatDate(expense.date)}
-                          </div>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <p className="text-gray-500 text-center py-4">
                       {t.noExpenses as string || 'Nenhuma despesa encontrada'}
