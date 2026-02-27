@@ -72,7 +72,7 @@ export default function AchievementsPage() {
           <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-blue-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-xs font-medium">Total</p>
+                <p className="text-gray-600 text-xs font-medium">{t?.achievementTotal || 'Total'}</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{totalAchievements}</p>
               </div>
               <Trophy className="w-10 h-10 text-blue-500 opacity-15" />
@@ -82,7 +82,7 @@ export default function AchievementsPage() {
           <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-indigo-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-xs font-medium">Progresso</p>
+                <p className="text-gray-600 text-xs font-medium">{t?.achievementProgress || 'Progresso'}</p>
                 <div className="mt-1">
                   <p className="text-2xl font-bold text-gray-900">{completePercentage}%</p>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1.5">
@@ -100,7 +100,7 @@ export default function AchievementsPage() {
           <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-green-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-xs font-medium">Recentes</p>
+                <p className="text-gray-600 text-xs font-medium">{t?.achievementRecent || 'Recentes'}</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{recentAchievements}</p>
               </div>
               <Award className="w-10 h-10 text-green-500 opacity-15" />
@@ -112,7 +112,7 @@ export default function AchievementsPage() {
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tipo</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">{t?.achievementType || 'Tipo'}</label>
               <select 
                 value={typeFilter} 
                 onChange={e => setTypeFilter(e.target.value)} 
@@ -122,16 +122,16 @@ export default function AchievementsPage() {
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Período</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">{t?.achievementPeriod || 'Período'}</label>
               <select 
                 value={period} 
                 onChange={e => setPeriod(e.target.value)} 
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               >
-                <option value="all">{language==='en-US'?'All time': language==='es-ES'?'Todo el tiempo':'Todo o período'}</option>
-                <option value="30d">{language==='en-US'?'Last 30 days': language==='es-ES'?'Últimos 30 días':'Últimos 30 dias'}</option>
-                <option value="90d">{language==='en-US'?'Last 90 days': language==='es-ES'?'Últimos 90 días':'Últimos 90 dias'}</option>
-                <option value="year">{language==='en-US'?'This year': language==='es-ES'?'Este año':'Este ano'}</option>
+                <option value="all">{t?.achievementAllTime || 'Todo o período'}</option>
+                <option value="30d">{t?.achievementLast30 || 'Últimos 30 dias'}</option>
+                <option value="90d">{t?.achievementLast90 || 'Últimos 90 dias'}</option>
+                <option value="year">{t?.achievementThisYear || 'Este ano'}</option>
               </select>
             </div>
           </div>

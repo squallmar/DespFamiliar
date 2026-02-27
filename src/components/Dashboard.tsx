@@ -587,7 +587,7 @@ export default function Dashboard() {
                 icon={Target}
                 color="bg-green-500"
                 t={t}
-                tooltip="Inclui todas as despesas (recorrentes e não recorrentes) divididas pelos dias transcorridos do mês"
+                tooltip={t.dailyAverageTooltip as string}
               />
               <StatsCard
                 title={t.monthlyProjection as string || 'Projeção Mensal'}

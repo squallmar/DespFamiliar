@@ -268,7 +268,7 @@ export default function BillsManager({
             onClick={() => onOpenModal()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer transition-colors"
           >
-            <Plus size={20} /> Nova Conta
+            <Plus size={20} /> {t.newBill || 'Nova Conta'}
           </button>
         </div>
 
@@ -544,9 +544,9 @@ export default function BillsManager({
           {/* Tendência mensal */}
           {monthlyTrend.length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">Tendência Mensal de Contas</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyTrend} margin={{ left: 16 }}>
+              <h3 className="text-lg font-semibold mb-4">{t.monthlyTrend || 'Tendência Mensal de Contas'}</h3>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={monthlyTrend} margin={{ left: 65 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis width={96} tickFormatter={(v) => formatCurrency(Number(v))} />
@@ -563,8 +563,8 @@ export default function BillsManager({
           {/* Distribuição por categoria */}
           {categoryData.length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">Distribuição por Categoria</h3>
-              <ResponsiveContainer width="100%" height={300}>
+              <h3 className="text-lg font-semibold mb-4">{t.categoryDistribution || 'Distribuição por Categoria'}</h3>
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
                     data={categoryData}
