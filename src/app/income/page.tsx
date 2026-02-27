@@ -1,0 +1,56 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import ProventosAdvancedCard from '@/components/ProventosAdvancedCard';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
+
+export default function IncomePage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [currentPeriod] = useState<{ month: number; year: number }>({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear()
+  });
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  // Salvar proventos no localStorage
+  const handleProventosChange = (value: number) => {
+    if (typeof window !== 'undefined') {
+      const key = `proventos_bills_${currentPeriod.year}-${String(currentPeriod.month).padStart(2, '0')}`;
+      window.localStorage.setItem(key, String(value));
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">💰 Proventos do Mês</h1>
+          <p className="text-gray-600">Gerencie seus proventos (renda) mensais</p>
+        </div>
+
+        {/* Componente Avançado de Proventos */}
+        <ProventosAdvancedCard 
+          period={currentPeriod} 
+          totalExpenses={0}
+          onTotalChange={handleProventosChange}
+        />
+      </div>
+    </div>
+  );
+}
