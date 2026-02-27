@@ -30,7 +30,16 @@ interface Bill {
   recurring?: boolean;
   recurring_type?: string;
   notes?: string;
+  spent_by?: string;
+  paid_by?: string;
   created_at: string;
+}
+
+interface FamilyMember {
+  id: string;
+  name: string;
+  avatar?: string;
+  color?: string;
 }
 
 
@@ -42,6 +51,7 @@ interface BillsManagerProps {
   onMarkAsPaid: (bill: Bill) => Promise<void>;
   period: { month: number; year: number };
   onPeriodChange: (period: { month: number; year: number }) => void;
+  familyMembers?: FamilyMember[];
 }
 
 interface BillStats {
@@ -94,7 +104,8 @@ export default function BillsManager({
   onDelete,
   onMarkAsPaid,
   period,
-  onPeriodChange
+  onPeriodChange,
+  familyMembers = []
 }: BillsManagerProps) {
   const { language, currency } = useLocation();
   const formatCurrency = (value: number) => new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
@@ -365,6 +376,7 @@ export default function BillsManager({
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membro</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimento</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -374,7 +386,7 @@ export default function BillsManager({
               <tbody className="divide-y divide-gray-200">
                 {filteredBills.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                       Nenhuma conta encontrada
                     </td>
                   </tr>
@@ -402,6 +414,30 @@ export default function BillsManager({
                               <span className="text-sm">{bill.category_name}</span>
                             </div>
                           )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {(() => {
+                            const spender = familyMembers.find(m => m.id === bill.spent_by);
+                            const payer = familyMembers.find(m => m.id === bill.paid_by);
+                            if (spender || payer) {
+                              return (
+                                <div className="text-sm">
+                                  {spender && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-lg">{spender.avatar || '👤'}</span>
+                                      <span className="text-gray-700">{spender.name}</span>
+                                    </div>
+                                  )}
+                                  {payer && bill.status === 'paid' && payer.id !== spender?.id && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                      <span>💳 {payer.name}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return <span className="text-gray-400 text-xs">—</span>;
+                          })()}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`font-semibold ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>

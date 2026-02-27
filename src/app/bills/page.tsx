@@ -247,6 +247,7 @@ export default function BillsPage() {
             onMarkAsPaid={handleMarkAsPaid}
             period={period}
             onPeriodChange={setPeriod}
+            familyMembers={familyMembers}
           />
         </div>
       </div>
