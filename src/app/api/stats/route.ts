@@ -226,6 +226,8 @@ export async function GET(request: NextRequest) {
       category_name: e.category_name,
       category_color: e.category_color,
       category_icon: e.category_icon,
+      spentBy: e.spent_by,
+      paidBy: e.paid_by,
     }));
     // buscar últimos bills do mês e unir com expenses
     const recentBillsResult = await db.query(
@@ -249,6 +251,8 @@ export async function GET(request: NextRequest) {
       category_name: b.category_name,
       category_color: b.category_color,
       category_icon: b.category_icon,
+      spentBy: b.spent_by,
+      paidBy: b.paid_by,
     }));
     // mesclar, ordenar por data e limitar
     const mergedRecent = [...recentExpensesFromExpenses, ...recentExpensesFromBills]
