@@ -265,8 +265,9 @@ export async function GET(request: NextRequest) {
     
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
     const currentDay = now.getDate();
-    const nonRecurringTotal = Number(thisMonthNonRecurring.total || 0);
-    const dailyAverage = currentDay > 0 ? (nonRecurringTotal / currentDay) : 0;
+    
+    // Calcular média diária incluindo TODAS as despesas (recorrentes + não recorrentes)
+    const dailyAverage = currentDay > 0 ? (thisTotal / currentDay) : 0;
 
     const recurringRowsResult = await db.query(
       `SELECT amount
@@ -288,7 +289,8 @@ export async function GET(request: NextRequest) {
     const recurringBillsTotal = recurringBillsResult.rows.reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
     const recurringTotal = recurringTotalExpenses + recurringBillsTotal;
 
-    const projectedMonthlyTotal = (dailyAverage * daysInMonth) + recurringTotal;
+    // Projeção mensal baseada na média diária de TODOS os gastos até hoje
+    const projectedMonthlyTotal = dailyAverage * daysInMonth;
     
     const stats = {
       totalThisMonth: thisTotal,

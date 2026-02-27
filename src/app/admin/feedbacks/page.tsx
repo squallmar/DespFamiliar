@@ -31,13 +31,13 @@ export default function AdminFeedbacksPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError("Erro ao carregar feedbacks");
+        setError(t.errorLoadingFeedbacks || "Erro ao carregar feedbacks");
         setLoading(false);
       });
   }, [user]);
 
   if (!user?.admin) {
-    return <div className="p-8 text-red-600 font-bold">Acesso restrito ao administrador.</div>;
+    return <div className="p-8 text-red-600 font-bold">{t.adminAccessRestricted || 'Acesso restrito ao administrador.'}</div>;
   }
 
   return (
@@ -63,16 +63,16 @@ export default function AdminFeedbacksPage() {
                   <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                     {(() => {
                       const pageMap: Record<string, string> = {
-                        '/profile': 'Perfil',
-                        '/': 'Dashboard',
-                        '/expenses': 'Despesas',
-                        '/projections': 'Projeções',
-                        '/reports': 'Relatórios',
-                        '/login': 'Login',
-                        '/register': 'Cadastro',
-                        '/reset': 'Recuperação de senha',
-                        '/admin/users': 'Admin: Usuários',
-                        '/admin/feedbacks': 'Admin: Feedbacks',
+                        '/profile': t.pageProfile || 'Perfil',
+                        '/': t.pageDashboard || 'Dashboard',
+                        '/expenses': t.pageExpenses || 'Despesas',
+                        '/projections': t.pageProjections || 'Projeções',
+                        '/reports': t.pageReports || 'Relatórios',
+                        '/login': t.pageLogin || 'Login',
+                        '/register': t.pageRegister || 'Cadastro',
+                        '/reset': t.pageReset || 'Recuperação de senha',
+                        '/admin/users': t.pageAdminUsers || 'Admin: Usuários',
+                        '/admin/feedbacks': t.pageAdminFeedbacks || 'Admin: Feedbacks',
                       };
                       return pageMap[fb.page] || fb.page;
                     })()}

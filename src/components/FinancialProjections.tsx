@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Calendar, Target, DollarSign, Wallet, TrendingDown } from 'lucide-react';
+import { TrendingUp, Calendar, Target, DollarSign, Wallet, TrendingDown, Info } from 'lucide-react';
 
 import { useLocation } from '@/contexts/LocationContext';
 import translations, { resolveLanguage } from '@/lib/translations';
@@ -20,6 +20,21 @@ interface IncomeItem {
   total?: number;
   notes?: string;
 }
+
+type TrendItem = {
+  title: string;
+  detail: string;
+  dotClass: string;
+  textClass: string;
+};
+
+type RecommendationItem = {
+  title: string;
+  detail: string;
+  cardClass: string;
+  titleClass: string;
+  detailClass: string;
+};
 
 // Simple linear regression y = a + b*x
 function linearRegression(y: number[]) {
@@ -57,37 +72,68 @@ interface ProjectionCardProps {
   change: number;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   color: string;
+  inverseColor?: boolean;
+  tooltip?: string;
 }
 
-function ProjectionCard({ title, amount, change, icon: Icon, color }: ProjectionCardProps) {
+function ProjectionCard({ title, amount, change, icon: Icon, color, inverseColor = false, tooltip }: ProjectionCardProps) {
   const { language, currency } = useLocation();
   const formatCurrency = (value: number) => new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
+  
+  // inverseColor: true para receita, saldo, economia (+ é bom = verde)
+  // inverseColor: false para gastos (+ é ruim = vermelho)
+  const changeColor = inverseColor 
+    ? (change >= 0 ? 'text-green-600' : 'text-red-600')
+    : (change >= 0 ? 'text-red-600' : 'text-green-600');
+  
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-full ${color}`}>
           <Icon className="text-white" size={24} />
         </div>
-        <div className={`text-sm font-medium ${change >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+        <div className={`text-sm font-medium ${changeColor}`}>
           {change >= 0 ? '+' : ''}{change.toFixed(1)}%
         </div>
       </div>
-      <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
+      <div className="flex items-center gap-2 relative group mb-2">
+        <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
+        {tooltip && (
+          <>
+            <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
+            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
+              {tooltip}
+              <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+            </div>
+          </>
+        )}
+      </div>
       <p className="text-2xl font-bold text-gray-900">{formatCurrency(amount)}</p>
     </div>
   );
 }
 
-function SavingsRateCard({ title, rate, icon: Icon, color }: { title: string; rate: number; icon: React.ComponentType<{ size?: number; className?: string }>; color: string }) {
+function SavingsRateCard({ title, rate, icon: Icon, color, tooltip }: { title: string; rate: number; icon: React.ComponentType<{ size?: number; className?: string }>; color: string; tooltip?: string }) {
   const progressColor = rate >= 20 ? 'bg-green-500' : rate >= 10 ? 'bg-yellow-500' : 'bg-orange-500';
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-full ${color}`}>
           <Icon className="text-white" size={24} />
         </div>
       </div>
-      <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
+      <div className="flex items-center gap-2 relative group mb-2">
+        <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
+        {tooltip && (
+          <>
+            <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
+            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
+              {tooltip}
+              <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+            </div>
+          </>
+        )}
+      </div>
       <div className="mb-3">
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
@@ -117,9 +163,12 @@ export default function FinancialProjections() {
 
   // Data state
   const [reports, setReports] = useState<ReportsResponse | null>(null);
+  const [recent3MonthsReport, setRecent3MonthsReport] = useState<ReportsResponse | null>(null);
+  const [previous3MonthsReport, setPrevious3MonthsReport] = useState<ReportsResponse | null>(null);
   const [incomeHistory, setIncomeHistory] = useState<IncomeItem[]>([]);
   const [currentIncome, setCurrentIncome] = useState<number>(0);
   const [projectedThisMonth, setProjectedThisMonth] = useState<number>(0);
+  const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,19 +179,38 @@ export default function FinancialProjections() {
         setLoading(true);
         setError(null);
         const today = new Date();
+        const formatYmd = (date: Date) => date.toISOString().slice(0, 10);
         const fromDate = new Date(today.getFullYear(), today.getMonth() - 11, 1);
         const toDate = today;
-        const from = fromDate.toISOString().slice(0, 10);
-        const to = toDate.toISOString().slice(0, 10);
-        const repRes = await fetch(`/api/reports?from=${from}&to=${to}`, { credentials: 'include' });
+        const from = formatYmd(fromDate);
+        const to = formatYmd(toDate);
+
+        const recentStart = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+        const previousStart = new Date(today.getFullYear(), today.getMonth() - 5, 1);
+        const previousEnd = new Date(today.getFullYear(), today.getMonth() - 2, 0);
+
+        const [repRes, statsRes, recentRes, previousRes] = await Promise.all([
+          fetch(`/api/reports?from=${from}&to=${to}`, { credentials: 'include' }),
+          fetch('/api/stats', { credentials: 'include' }),
+          fetch(`/api/reports?from=${formatYmd(recentStart)}&to=${to}`, { credentials: 'include' }),
+          fetch(`/api/reports?from=${formatYmd(previousStart)}&to=${formatYmd(previousEnd)}`, { credentials: 'include' }),
+        ]);
+
         const repJson = await repRes.json();
         if (!repRes.ok) throw new Error(repJson.error || 'Falha ao carregar relatórios');
         setReports(repJson as ReportsResponse);
 
-        const statsRes = await fetch('/api/stats', { credentials: 'include' });
         const statsJson = await statsRes.json();
         if (!statsRes.ok) throw new Error(statsJson.error || 'Falha ao carregar projeção');
         setProjectedThisMonth(Number(statsJson.projectedMonthlyTotal || 0));
+
+        const recentJson = await recentRes.json();
+        if (!recentRes.ok) throw new Error(recentJson.error || 'Falha ao carregar tendências recentes');
+        setRecent3MonthsReport(recentJson as ReportsResponse);
+
+        const previousJson = await previousRes.json();
+        if (!previousRes.ok) throw new Error(previousJson.error || 'Falha ao carregar tendências anteriores');
+        setPrevious3MonthsReport(previousJson as ReportsResponse);
 
         // Fetch income data for the last 12 months
         const incomeRes = await fetch('/api/incomes', { credentials: 'include' });
@@ -155,6 +223,21 @@ export default function FinancialProjections() {
           const currentMonthIncome = incomeJson.history.find((item: IncomeItem) => item.month === currentMonthKey);
           const currentAmount = currentMonthIncome ? Number(currentMonthIncome.total ?? currentMonthIncome.amount) : 0;
           setCurrentIncome(currentAmount || 0);
+        }
+
+        // Fetch financial goals
+        try {
+          const goalsRes = await fetch('/api/goals', { credentials: 'include' });
+          const goalsJson = await goalsRes.json();
+          if (goalsRes.ok && Array.isArray(goalsJson.items)) {
+            setGoals(goalsJson.items);
+          } else if (!goalsRes.ok) {
+            console.warn('Goals API error:', goalsJson.error);
+            setGoals([]); // Fallback to empty array
+          }
+        } catch (goalsError) {
+          console.warn('Failed to fetch goals:', goalsError);
+          setGoals([]); // Fallback to empty array, don't fail the entire page
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao carregar projeções');
@@ -261,12 +344,152 @@ export default function FinancialProjections() {
   const balanceAmount = netBalance;
   const balanceChange = netBalanceChange;
 
-  const periodLabel = timeRange === '1month' ? 'Próximo mês' : timeRange === '3months' ? t.next3 : timeRange === '6months' ? t.next6 : t.next12;
+  const periodLabel = timeRange === '1month' ? t.nextMonth : timeRange === '3months' ? t.next3 : timeRange === '6months' ? t.next6 : t.next12;
   const projectedTitle = `${(t.projectedSpending?.split('(')?.[0] || 'Gastos Projetados').trim()} (${periodLabel})`;
+
+  const trendAnalysis = useMemo(() => {
+    const toMap = (report: ReportsResponse | null) => {
+      const map = new Map<string, { name: string; total: number }>();
+      if (!report) return map;
+      report.totalsByCategory.forEach((item) => {
+        const total = Number(item.total || 0);
+        if (total > 0) {
+          const normalizedName = categoriesMap[item.name] || item.name;
+          map.set(normalizedName, { name: normalizedName, total });
+        }
+      });
+      return map;
+    };
+
+    const recentMap = toMap(recent3MonthsReport);
+    const previousMap = toMap(previous3MonthsReport);
+    const categoryNames = Array.from(new Set([...recentMap.keys(), ...previousMap.keys()]));
+
+    const deltas = categoryNames
+      .map((name) => {
+        const recent = recentMap.get(name)?.total || 0;
+        const previous = previousMap.get(name)?.total || 0;
+        const change = previous > 0 ? ((recent - previous) / previous) * 100 : recent > 0 ? 100 : 0;
+        return { name, recent, previous, change, absChange: Math.abs(change) };
+      })
+      .filter((item) => item.recent > 0 || item.previous > 0)
+      .sort((a, b) => b.absChange - a.absChange);
+
+    const trends: TrendItem[] = deltas.slice(0, 3).map((item) => {
+      if (item.change >= 2) {
+        return {
+          title: `${t.trendIncreaseIn || 'Increase in'} ${item.name}`,
+          detail: `+${item.change.toFixed(1)}% ${t.trendLast3Months || 'in the last 3 months'}`,
+          dotClass: 'bg-red-500',
+          textClass: 'text-red-600',
+        };
+      }
+      if (item.change <= -2) {
+        return {
+          title: `${t.trendReductionIn || 'Reduction in'} ${item.name}`,
+          detail: `${item.change.toFixed(1)}% ${t.trendLast3Months || 'in the last 3 months'}`,
+          dotClass: 'bg-green-500',
+          textClass: 'text-green-600',
+        };
+      }
+      return {
+        title: `${t.trendStableIn || 'Stable in'} ${item.name}`,
+        detail: `${item.change.toFixed(1)}% ${t.trendLast3Months || 'in the last 3 months'}`,
+        dotClass: 'bg-yellow-500',
+        textClass: 'text-yellow-600',
+      };
+    });
+
+    const increase = deltas.find((item) => item.change >= 2);
+    const reduction = deltas.find((item) => item.change <= -2);
+    const volatility = reports?.monthlyTotals?.map((m) => Number(m.total || 0)).filter((v) => v > 0) || [];
+    const avgVol = volatility.length ? volatility.reduce((sum, v) => sum + v, 0) / volatility.length : 0;
+    const maxVol = volatility.length ? Math.max(...volatility) : 0;
+    const seasonalityPct = avgVol > 0 ? ((maxVol - avgVol) / avgVol) * 100 : 0;
+
+    const recommendations: RecommendationItem[] = [
+      increase
+        ? {
+            title: `${t.adjustBudgetFor || 'Adjust Budget for'} ${increase.name}`,
+            detail: `${t.considerLimitTo || 'Consider revising the limit to'} ~${formatCurrency((increase.recent / 3) * 1.1)} ${t.perMonth || 'per month'}.`,
+            cardClass: 'bg-blue-50',
+            titleClass: 'text-blue-800',
+            detailClass: 'text-blue-600',
+          }
+        : {
+            title: t.keepCurrentBudget || 'Keep current budget',
+            detail: t.noRelevantIncrease || 'No relevant increase by category in recent months.',
+            cardClass: 'bg-blue-50',
+            titleClass: 'text-blue-800',
+            detailClass: 'text-blue-600',
+          },
+      reduction
+        ? {
+            title: t.savingOpportunity || 'Saving Opportunity',
+            detail: `${t.reductionIn || 'Reduction in'} ${reduction.name} ${t.allowsRedirect || 'allows redirecting around'} ${formatCurrency(Math.max(0, (reduction.previous - reduction.recent) / 3))}/${t.monthShort || 'month'} ${t.toGoals || 'to goals'}.`,
+            cardClass: 'bg-green-50',
+            titleClass: 'text-green-800',
+            detailClass: 'text-green-600',
+          }
+        : {
+            title: t.savingOpportunity || 'Saving Opportunity',
+            detail: t.reduceVariableCategories || 'Try reducing variable categories to strengthen your goals.',
+            cardClass: 'bg-green-50',
+            titleClass: 'text-green-800',
+            detailClass: 'text-green-600',
+          },
+      seasonalityPct > 20
+        ? {
+            title: t.prepareSeasonality || 'Prepare for Seasonality',
+            detail: `${t.yourSpendingVariesUpTo || 'Your spending varies up to'} ${seasonalityPct.toFixed(1)}%; ${t.keepExtraReserve || 'keep an extra reserve in peak months'}.`,
+            cardClass: 'bg-yellow-50',
+            titleClass: 'text-yellow-800',
+            detailClass: 'text-yellow-600',
+          }
+        : {
+            title: t.prepareSeasonality || 'Prepare for Seasonality',
+            detail: t.monthlyVariationControlled || 'Monthly variation is controlled; keep current planning with a small reserve.',
+            cardClass: 'bg-yellow-50',
+            titleClass: 'text-yellow-800',
+            detailClass: 'text-yellow-600',
+          },
+    ];
+
+    const fallbackTrends: TrendItem[] = [
+      {
+        title: t.increaseFood || 'Aumento em Alimentação',
+        detail: t.increaseFoodDetail || '+15% nos últimos 3 meses',
+        dotClass: 'bg-red-500',
+        textClass: 'text-red-600',
+      },
+      {
+        title: t.reductionTransport || 'Redução em Transporte',
+        detail: t.reductionTransportDetail || '-8% com trabalho remoto',
+        dotClass: 'bg-green-500',
+        textClass: 'text-green-600',
+      },
+      {
+        title: t.seasonalityLeisure || 'Sazonalidade em Lazer',
+        detail: t.seasonalityLeisureDetail || 'Picos em dezembro e janeiro',
+        dotClass: 'bg-yellow-500',
+        textClass: 'text-yellow-600',
+      },
+    ];
+
+    const hasRealTrendData = trends.length > 0;
+    const hasRealRecommendationData = Boolean(increase || reduction || volatility.length > 0);
+
+    return {
+      trends: hasRealTrendData ? trends : fallbackTrends,
+      recommendations,
+      hasRealTrendData,
+      hasRealRecommendationData,
+    };
+  }, [recent3MonthsReport, previous3MonthsReport, reports, categoriesMap, formatCurrency, t]);
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
         <p className="text-gray-600">{t.loading || 'Carregando projeções...'}</p>
       </div>
     );
@@ -274,7 +497,7 @@ export default function FinancialProjections() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
         <p className="text-red-600">{error}</p>
       </div>
     );
@@ -284,27 +507,29 @@ export default function FinancialProjections() {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{t.projectionsTitle}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t.projectionsTitle || 'Projeções Financeiras'}</h1>
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="1month">Próximo mês</option>
-            <option value="3months">{t.next3}</option>
-            <option value="6months">{t.next6}</option>
-            <option value="12months">{t.next12}</option>
+            <option value="1month">{t.nextMonth || 'Próximo mês'}</option>
+            <option value="3months">{t.next3 || 'Próximos 3 meses'}</option>
+            <option value="6months">{t.next6 || 'Próximos 6 meses'}</option>
+            <option value="12months">{t.next12 || 'Próximos 12 meses'}</option>
           </select>
         </div>
 
         {/* Cards de Projeção */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 mt-8">
           <ProjectionCard
-            title="Receita Total"
+            title={t.totalIncome || 'Receita Total'}
             amount={totalIncome}
             change={0}
             icon={Wallet}
             color="bg-emerald-500"
+            inverseColor={true}
+            tooltip={t.tooltipTotalIncome || 'Soma de todos os proventos (salário, freelance, rendimentos) registrados no período selecionado.'}
           />
           <ProjectionCard
             title={projectedTitle}
@@ -312,19 +537,23 @@ export default function FinancialProjections() {
             change={projectedSpendingChange}
             icon={TrendingDown}
             color="bg-red-500"
+            tooltip={t.tooltipProjectedSpending || 'Projeção baseada na média dos gastos dos últimos 3 meses, ajustada pelo período selecionado. Comparada com o período anterior.'}
           />
           <ProjectionCard
-            title="Saldo Líquido"
+            title={t.netBalance || 'Saldo Líquido'}
             amount={balanceAmount}
             change={balanceChange}
             icon={DollarSign}
             color={balanceAmount >= 0 ? "bg-green-500" : "bg-orange-500"}
+            inverseColor={true}
+            tooltip={t.tooltipNetBalance || 'Diferença entre Receita Total e Gastos Projetados. Mostra quanto você pode economizar ou investir no período.'}
           />
           <SavingsRateCard
-            title="Taxa de Poupança"
+            title={t.savingsRateTitle || 'Taxa de Poupança'}
             rate={savingsRate}
             icon={Target}
             color="bg-blue-500"
+            tooltip={t.tooltipSavingsRate || 'Percentual do Saldo Líquido em relação à Receita Total: (Saldo Líquido ÷ Receita Total) × 100. Indica a eficiência financeira.'}
           />
           <ProjectionCard
             title={t.expectedSavings}
@@ -332,14 +561,16 @@ export default function FinancialProjections() {
             change={expectedSavingsChange}
             icon={Calendar}
             color="bg-purple-500"
+            inverseColor={true}
+            tooltip={t.tooltipExpectedSavings || 'Economia ou gasto extra previsto comparando com a média histórica dos últimos 3 meses. Valores positivos indicam redução de gastos.'}
           />
         </div>
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Histórico vs Projeção com Receita */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{t.historyVsProjection || 'Receita vs Despesa'}</h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
+            <h3 className="text-lg font-semibold mb-4">{t.incomeVsExpenses || 'Receita vs Despesa'}</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData} margin={{ left: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -352,21 +583,21 @@ export default function FinancialProjections() {
                   dataKey="income" 
                   stroke="#10b981" 
                   strokeWidth={2}
-                  name="Receita"
+                  name={t.chartIncome || 'Receita'}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="expenses" 
                   stroke="#ef4444" 
                   strokeWidth={2}
-                  name="Despesas"
+                  name={t.chartExpenses || 'Despesas'}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="trend" 
                   stroke="#8884d8" 
                   strokeWidth={1}
-                  name={t.trendBased || 'Tendência'}
+                  name={t.chartTrend || 'Tendência'}
                   strokeDasharray="5 5"
                 />
               </LineChart>
@@ -374,7 +605,7 @@ export default function FinancialProjections() {
           </div>
 
           {/* Distribuição de Gastos Projetados */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
             <h3 className="text-lg font-semibold mb-4">{t.projectedByCategory || 'Distribuição Projetada por Categoria'}</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -401,88 +632,88 @@ export default function FinancialProjections() {
         </div>
 
         {/* Análise Detalhada */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Tendências */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{t.identifiedTrends || 'Tendências Identificadas'}</h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{t.identifiedTrends || 'Tendências Identificadas'}</h3>
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${trendAnalysis.hasRealTrendData ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                {trendAnalysis.hasRealTrendData ? (t.realData || 'Real data') : (t.fallbackData || 'Fallback')}
+              </span>
+            </div>
             <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-red-600">{t.increaseFood || 'Aumento em Alimentação'}</p>
-                  <p className="text-sm text-gray-600">{t.increaseFoodDetail || '+15% nos últimos 3 meses'}</p>
+              {trendAnalysis.trends.map((trend, index) => (
+                <div className="flex items-start space-x-3" key={`${trend.title}-${index}`}>
+                  <div className={`w-2 h-2 ${trend.dotClass} rounded-full mt-2`}></div>
+                  <div>
+                    <p className={`font-medium ${trend.textClass}`}>{trend.title}</p>
+                    <p className="text-sm text-gray-600">{trend.detail}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-green-600">{t.reductionTransport || 'Redução em Transporte'}</p>
-                  <p className="text-sm text-gray-600">{t.reductionTransportDetail || '-8% com trabalho remoto'}</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-yellow-600">{t.seasonalityLeisure || 'Sazonalidade em Lazer'}</p>
-                  <p className="text-sm text-gray-600">{t.seasonalityLeisureDetail || 'Picos em dezembro e janeiro'}</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
           {/* Recomendações */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{t.recommendations || 'Recomendações'}</h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{t.recommendations || 'Recomendações'}</h3>
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${trendAnalysis.hasRealRecommendationData ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                {trendAnalysis.hasRealRecommendationData ? (t.realData || 'Real data') : (t.fallbackData || 'Fallback')}
+              </span>
+            </div>
             <div className="space-y-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="font-medium text-blue-800">{t.adjustFoodBudget || 'Ajustar Orçamento de Alimentação'}</p>
-                <p className="text-sm text-blue-600">{t.adjustFoodBudgetDetail || 'Considere aumentar o limite para R$ 650'}</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-lg">
-                <p className="font-medium text-green-800">{t.savingOpportunity || 'Oportunidade de Economia'}</p>
-                <p className="text-sm text-green-600">{t.savingOpportunityDetail || 'Redirecione economia de transporte para metas'}</p>
-              </div>
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <p className="font-medium text-yellow-800">{t.prepareSeasonality || 'Preparar para Sazonalidade'}</p>
-                <p className="text-sm text-yellow-600">{t.prepareSeasonalityDetail || 'Reserve R$ 200 extras para dezembro'}</p>
-              </div>
+              {trendAnalysis.recommendations.map((rec, index) => (
+                <div className={`p-3 rounded-lg ${rec.cardClass}`} key={`${rec.title}-${index}`}>
+                  <p className={`font-medium ${rec.titleClass}`}>{rec.title}</p>
+                  <p className={`text-sm ${rec.detailClass}`}>{rec.detail}</p>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Metas vs Realidade */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{t.goalsProgress || 'Progresso das Metas'}</h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 relative group">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold">{t.goalsProgress || 'Progresso das Metas'}</h3>
+              <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
+              <div className="absolute top-6 left-0 mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
+                {t.goalsProgressTooltip || 'Metas financeiras registradas no sistema com acompanhamento de progresso. Os valores são atualizados conforme as economias vão sendo depositadas.'}
+                <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              </div>
+            </div>
             <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">{t.goalEmergency || 'Emergência'}</span>
-                  <span className="text-sm text-gray-600">65%</span>
+              {goals && goals.length > 0 ? (
+                goals.map((goal, index) => {
+                  const colors = ['blue-600', 'green-600', 'purple-600', 'red-600', 'pink-600', 'indigo-600', 'cyan-600', 'teal-600'];
+                  const colorClass = colors[index % colors.length];
+                  const progress = Math.min(Math.round(goal.progress_percent || 0), 100);
+                  
+                  return (
+                    <div key={goal.id}>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium">{goal.name}</span>
+                        <span className="text-sm text-gray-600">{progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`bg-${colorClass} h-2 rounded-full transition-all duration-500`} 
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formatCurrency(goal.current_amount)} {t.of || 'de'} {formatCurrency(goal.target_amount)}
+                      </p>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 px-4">
+                  <div className="text-4xl mb-3">🎯</div>
+                  <p className="text-gray-700 font-medium">{t.noGoalsCreated || 'Nenhuma meta criada ainda'}</p>
+                  <p className="text-sm text-gray-500 mt-2">{t.createGoalToTrack || 'Crie uma meta para começar a acompanhar seu progresso'}</p>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '65%' }}></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{formatCurrency(3250)} {t.of || 'de'} {formatCurrency(5000)}</p>
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">{t.goalTrip || 'Viagem'}</span>
-                  <span className="text-sm text-gray-600">32%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '32%' }}></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{formatCurrency(960)} {t.of || 'de'} {formatCurrency(3000)}</p>
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">{t.goalNewHome || 'Casa Nova'}</span>
-                  <span className="text-sm text-gray-600">18%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: '18%' }}></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{formatCurrency(9000)} {t.of || 'de'} {formatCurrency(50000)}</p>
-              </div>
+              )}
             </div>
           </div>
         </div>

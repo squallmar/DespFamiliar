@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation } from '@/contexts/LocationContext';
 import translations, { resolveLanguage } from '@/lib/translations';
-import { PlusCircle, TrendingUp, TrendingDown, Target, Calendar, Loader2, AlertTriangle } from 'lucide-react';
+import { PlusCircle, TrendingUp, TrendingDown, Target, Calendar, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { useCategories, useExpenses, useStats, useAlerts } from '@/hooks/useData';
 import { AlertItem, Expense } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
@@ -94,7 +94,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language, familyMe
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Valor</label>
+            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">{t.amount as string || 'Valor'}</label>
             <input
               type="number"
               placeholder={t.value as string}
@@ -108,7 +108,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language, familyMe
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Descrição</label>
+            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">{t.description as string || 'Descrição'}</label>
             <input
               type="text"
               placeholder={t.description as string}
@@ -120,7 +120,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language, familyMe
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Data</label>
+            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">{t.date as string || 'Data'}</label>
             <input
               type="date"
               value={date}
@@ -132,7 +132,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language, familyMe
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Categoria</label>
+            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">{t.category as string || 'Categoria'}</label>
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
@@ -149,7 +149,7 @@ function QuickAddExpense({ onAddExpense, categories, loading, language, familyMe
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Tipo</label>
+            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">{t.type as string || 'Tipo'}</label>
             <select
               value={recurrence}
               onChange={e => setRecurrence(e.target.value)}
@@ -171,6 +171,8 @@ function QuickAddExpense({ onAddExpense, categories, loading, language, familyMe
               onChange={setSpentBy}
               label={t.spentBy as string || 'Quem Gastou'}
               optional={true}
+              optionalText={t.optional as string || '(Opcional)'}
+              nobodyText={t.nobodySpecific as string || 'Ninguém específico'}
             />
             <FamilyMemberSelector
               members={familyMembers}
@@ -178,6 +180,8 @@ function QuickAddExpense({ onAddExpense, categories, loading, language, familyMe
               onChange={setPaidBy}
               label={t.paidBy as string || 'Quem Pagou'}
               optional={true}
+              optionalText={t.optional as string || '(Opcional)'}
+              nobodyText={t.nobodySpecific as string || 'Ninguém específico'}
             />
           </div>
         )}
@@ -209,7 +213,8 @@ function StatsCard({
   icon: Icon, 
   trend, 
   color, 
-  t 
+  t,
+  tooltip 
 }: {
   title: string;
   value: string;
@@ -217,12 +222,24 @@ function StatsCard({
   trend?: number;
   color: string;
   t: TranslationsType[keyof TranslationsType];
+  tooltip?: string;
 }) {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
+          <div className="flex items-center gap-2 relative group">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
+            {tooltip && (
+              <>
+                <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
+                <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-48 z-50 shadow-lg">
+                  {tooltip}
+                  <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                </div>
+              </>
+            )}
+          </div>
           <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mt-2">{value}</p>
           {trend !== undefined && (
             <div className={`flex items-center mt-3 ${trend >= 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -304,6 +321,11 @@ export default function Dashboard() {
       }
     };
   }, [refetchStats]);
+
+  // Filter bills from alerts for upcoming bills section
+  const upcomingBills = useMemo(() => {
+    return alerts.filter((alert: AlertItem) => alert.type === 'bill');
+  }, [alerts]);
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
   
@@ -455,9 +477,6 @@ export default function Dashboard() {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             {t.dashboard as string}
           </h1>
-          <p className="text-lg text-gray-600">
-            {t.appName as string}
-          </p>
         </div>
         
         {/* Filtro de ano/mês */}
@@ -500,70 +519,36 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {!alertsLoading && alerts && alerts.length > 0 && (
-          <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl shadow-lg p-6 mb-6">
-              <div className="flex items-center mb-4">
-                <div className="bg-orange-100 p-2 rounded-lg mr-3">
-                  <AlertTriangle className="text-orange-600 w-6 h-6" size={20} />
-                </div>
-                <span className="font-bold text-orange-900 text-lg">
-                  {language.includes('en') ? 'Alerts' : 
-                   language.includes('es') ? 'Alertas' : 
-                   'Alertas'}
-                </span>
-              </div>
-              <div className="space-y-3">
-                {alerts.map((a: AlertItem, idx) => (
-                  <div key={idx} className="text-sm text-orange-900 flex items-center justify-between bg-white/80 rounded-lg px-4 py-3 border border-orange-100 hover:bg-white transition">
-                    {a.type === 'budget' && (
-                      <>
-                        <span className="font-medium">
-                          {language.includes('en') ? 'Category' : language.includes('es') ? 'Categoria' : 'Categoria'}:
-                          <strong className="ml-1">{a.categoryName}</strong>
-                        </span>
-                        <span className="ml-2 font-semibold text-red-600">
-                          {Number.isFinite(a.usage) ? `${(a.usage * 100).toFixed(1)}%` : 'limite'}
-                        </span>
-                      </>
-                    )}
-                    {a.type === 'spike' && (
-                      <>
-                        <span className="font-medium">
-                          {language.includes('en') ? 'Spending spike' : language.includes('es') ? 'Pico de gastos' : 'Pico de gastos'}:
-                          <strong className="ml-1">
-                            {a.message || (language.includes('en')
-                              ? 'Last day above daily average'
-                              : language.includes('es')
-                                ? 'Ultimo dia por encima de la media diaria'
-                                : 'Ultimo dia acima da media diaria')}
-                          </strong>
-                        </span>
-                        <span className="ml-2 font-semibold text-red-600">
-                          {formatCurrency(a.lastDayTotal)} / {formatCurrency(a.dailyAvg)}
-                        </span>
-                      </>
-                    )}
-                    {a.type === 'bill' && (
-                      <>
-                        <span className="font-medium">
-                          {language.includes('en') ? 'Bill' : language.includes('es') ? 'Cuenta' : 'Conta'}:
-                          <strong className="ml-1">{a.description}</strong>
-                        </span>
-                        <span className={`ml-2 font-semibold ${a.isOverdue ? 'text-red-600' : a.daysUntilDue <= 3 ? 'text-orange-600' : 'text-green-600'}`}>
-                          {a.isOverdue
-                            ? (language.includes('en') ? 'Overdue' : language.includes('es') ? 'Atrasada' : 'Atrasada')
-                            : (language.includes('en') ? `Due in ${a.daysUntilDue} days` : language.includes('es') ? `Vence en ${a.daysUntilDue} dias` : `Vence em ${a.daysUntilDue} dias`)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                ))}
+        {/* Próximas contas a vencer */}
+        {upcomingBills.length > 0 && (
+          <div className="mt-8 mb-8 bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg">
+            <div className="flex gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock text-orange-600 flex-shrink-0" aria-hidden="true">
+                <path d="M12 6v6l4 2"></path>
+                <circle cx="12" cy="12" r="10"></circle>
+              </svg>
+              <div className="flex-1">
+                <h3 className="font-bold text-orange-800 mb-2">
+                  📅 {language.includes('en') ? 'Upcoming bills (next 7 days)' : language.includes('es') ? 'Próximas cuentas (próximos 7 días)' : 'Próximas contas a vencer (até 7 dias)'}
+                </h3>
+                <ul className="text-orange-700 text-sm space-y-1">
+                  {upcomingBills.map((bill: any) => (
+                    <li key={bill.billId}>
+                      • {bill.description} - {formatCurrency(bill.amount)} 
+                      {bill.isOverdue 
+                        ? ` (${language.includes('en') ? 'overdue' : language.includes('es') ? 'atrasada' : 'atrasada'})`
+                        : ` (${language.includes('en') ? `due in ${bill.daysUntilDue} ${bill.daysUntilDue === 1 ? 'day' : 'days'}` : language.includes('es') ? `vence en ${bill.daysUntilDue} ${bill.daysUntilDue === 1 ? 'día' : 'días'}` : `vence em ${bill.daysUntilDue} ${bill.daysUntilDue === 1 ? 'dia' : 'dias'}`})`
+                      }
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
+          </div>
         )}
 
         {noStatsData ? (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8 text-center">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8 mt-8 text-center">
             <h3 className="text-lg font-semibold mb-2">
               {t.noExpensesTitle as string || 'Sem despesas neste período'}
             </h3>
@@ -580,7 +565,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-8">
               <StatsCard
                 title={t.thisMonthSpending as string || 'Gastos Este Mês'}
                 value={formatCurrency(stats.totalThisMonth || 0)}
@@ -602,6 +587,7 @@ export default function Dashboard() {
                 icon={Target}
                 color="bg-green-500"
                 t={t}
+                tooltip="Inclui todas as despesas (recorrentes e não recorrentes) divididas pelos dias transcorridos do mês"
               />
               <StatsCard
                 title={t.monthlyProjection as string || 'Projeção Mensal'}
@@ -612,7 +598,7 @@ export default function Dashboard() {
               />
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h3 className="text-lg font-semibold mb-4">
                   {t.byCategoryThisMonth as string || 'Despesas por Categoria (Este Mês)'}

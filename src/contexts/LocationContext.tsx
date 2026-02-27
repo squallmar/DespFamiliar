@@ -98,7 +98,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch('https://ipapi.co/json/');
         const data = await res.json();
-        const detectedLang = normalizeLanguage(data.languages ? data.languages.split(',')[0] : getBrowserLanguage());
+        const browserLang = getBrowserLanguage();
+        const detectedLang = normalizeLanguage(browserLang);
         const detectedCurrency = guessCurrency(data.country_code, detectedLang);
         setLocation(loc => ({
           ...loc,

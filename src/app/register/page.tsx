@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Loader2, UserPlus, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
+import { useTranslation } from '@/lib/translations';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -19,6 +21,8 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
   const { user, register } = useAuth();
+  const { language } = useLocation();
+  const { t } = useTranslation(language);
 
   // Redirecionar se já estiver logado
   useEffect(() => {
@@ -34,13 +38,13 @@ export default function RegisterPage() {
 
     // Validações do frontend
     if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem');
+      setError(t('passwordsDontMatch', 'As senhas não coincidem'));
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
+      setError(t('passwordMinLength', 'A senha deve ter no mínimo 6 caracteres'));
       setLoading(false);
       return;
     }
@@ -49,7 +53,7 @@ export default function RegisterPage() {
       await register(formData.name, formData.email, formData.password);
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      setError(err instanceof Error ? err.message : t('genericError', 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
@@ -65,12 +69,12 @@ export default function RegisterPage() {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-          Crie sua conta
+          {t('registerTitle', 'Crie sua conta')}
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Ou{' '}
+          {t('registerOr', 'Ou')}{' '}
           <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-            entre na sua conta existente
+            {t('registerLoginLink', 'entre na sua conta existente')}
           </Link>
         </p>
       </div>
@@ -86,7 +90,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Nome completo
+                {t('fullName', 'Nome completo')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -98,7 +102,7 @@ export default function RegisterPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 pl-10 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                  placeholder="Seu nome completo"
+                  placeholder={t('fullNamePlaceholder', 'Seu nome completo')}
                   disabled={loading}
                 />
                 <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -127,7 +131,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Senha
+                {t('passwordLabel', 'Senha')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -139,7 +143,7 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 pr-10 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder={t('passwordMin6Placeholder', 'Mínimo 6 caracteres')}
                   disabled={loading}
                 />
                 <button
@@ -159,7 +163,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirmar senha
+                {t('confirmNewPassword', 'Confirmar senha')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -171,7 +175,7 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 pr-10 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                  placeholder="Digite a senha novamente"
+                  placeholder={t('confirmPasswordPlaceholder', 'Digite a senha novamente')}
                   disabled={loading}
                 />
                 <button
@@ -198,10 +202,10 @@ export default function RegisterPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando conta...
+                    {t('creatingAccount', 'Criando conta...')}
                   </>
                 ) : (
-                  'Criar conta'
+                  t('createAccountButton', 'Criar conta')
                 )}
               </button>
             </div>
@@ -213,7 +217,7 @@ export default function RegisterPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">Já tem uma conta?</span>
+                <span className="bg-white px-2 text-gray-500">{t('alreadyHaveAccount', 'Já tem uma conta?')}</span>
               </div>
             </div>
 
@@ -222,7 +226,7 @@ export default function RegisterPage() {
                 href="/login"
                 className="flex w-full justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                Fazer login
+                {t('loginButton', 'Fazer login')}
               </Link>
             </div>
           </div>

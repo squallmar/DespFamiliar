@@ -15,6 +15,7 @@ import {
   Search
 } from 'lucide-react';
 import { useLocation } from '@/contexts/LocationContext';
+import translations, { resolveLanguage } from '@/lib/translations';
 
 interface Bill {
   id: string;
@@ -52,6 +53,7 @@ interface BillsManagerProps {
   period: { month: number; year: number };
   onPeriodChange: (period: { month: number; year: number }) => void;
   familyMembers?: FamilyMember[];
+  upcomingBills?: any[];
 }
 
 interface BillStats {
@@ -105,27 +107,16 @@ export default function BillsManager({
   onMarkAsPaid,
   period,
   onPeriodChange,
-  familyMembers = []
+  familyMembers = [],
+  upcomingBills = []
 }: BillsManagerProps) {
   const { language, currency } = useLocation();
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const formatCurrency = (value: number) => new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid' | 'overdue'>('all');
   const [submitting, setSubmitting] = useState(false);
-
-  // Próximas contas a vencer
-  const upcomingBills = useMemo(() => {
-    const now = new Date();
-    const filtered = bills
-      .filter(b => b.status === 'pending')
-      .map(b => ({
-        ...b,
-        daysUntilDue: Math.ceil((new Date(b.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      }))
-      .filter(b => b.daysUntilDue <= 7 && b.daysUntilDue >= 0)
-      .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-    return filtered;
-  }, [bills]);
 
   // Contas vencidas
   const overdueBills = useMemo(() => {
@@ -261,7 +252,7 @@ export default function BillsManager({
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <p className="text-gray-600 flex items-center gap-2">
-          <Loader2 className="animate-spin" /> Carregando contas...
+          <Loader2 className="animate-spin" /> {t.loadingBills || 'Carregando contas...'}
         </p>
       </div>
     );
@@ -272,7 +263,7 @@ export default function BillsManager({
       <div className="max-w-7xl mx-auto">
         {/* Cabeçalho */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">💳 Contas a Pagar</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t.billsTitle || '💳 Contas a Pagar'}</h1>
           <button
             onClick={() => onOpenModal()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer transition-colors"
@@ -281,37 +272,65 @@ export default function BillsManager({
           </button>
         </div>
 
+        {/* Próximas contas a vencer */}
+        {upcomingBills.length > 0 && (
+          <div className="mb-8 bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg">
+            <div className="flex gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock text-orange-600 flex-shrink-0" aria-hidden="true">
+                <path d="M12 6v6l4 2"></path>
+                <circle cx="12" cy="12" r="10"></circle>
+              </svg>
+              <div className="flex-1">
+                <h3 className="font-bold text-orange-800 mb-2">
+                  📅 {t.upcomingBills || 'Próximas contas a vencer (até 7 dias)'}
+                </h3>
+                <ul className="text-orange-700 text-sm space-y-1">
+                  {upcomingBills.map((bill: any) => (
+                    <li key={bill.billId}>
+                      • {bill.description} - {formatCurrency(bill.amount)} 
+                      {bill.isOverdue 
+                        ? ` (${language.includes('en') ? 'overdue' : language.includes('es') ? 'atrasada' : 'atrasada'})`
+                        : ` (${language.includes('en') ? `due in ${bill.daysUntilDue} ${bill.daysUntilDue === 1 ? 'day' : 'days'}` : language.includes('es') ? `vence en ${bill.daysUntilDue} ${bill.daysUntilDue === 1 ? 'día' : 'días'}` : `vence em ${bill.daysUntilDue} ${bill.daysUntilDue === 1 ? 'dia' : 'dias'}`})`
+                      }
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Cards de resumo */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <BilledCard
-            title="Pendentes"
+            title={t.pendingBills || 'Pendentes'}
             amount={stats.pending}
             icon={Clock}
             color="bg-blue-500"
             subtitle={`${bills.filter(b => b.status === 'pending' && {
               daysUntilDue: Math.ceil((new Date(b.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-            }.daysUntilDue >= 0).length} contas`}
+            }.daysUntilDue >= 0).length} ${t.bills || 'contas'}`}
           />
           <BilledCard
-            title="Pagas"
+            title={t.paidBills || 'Pagas'}
             amount={stats.paid}
             icon={CheckCircle2}
             color="bg-green-500"
-            subtitle={`${bills.filter(b => b.status === 'paid').length} contas`}
+            subtitle={`${bills.filter(b => b.status === 'paid').length} ${t.bills || 'contas'}`}
           />
           <BilledCard
-            title="Vencidas"
+            title={t.overdueBills || 'Vencidas'}
             amount={stats.overdue}
             icon={AlertCircle}
             color="bg-red-500"
-            subtitle={`${overdueBills.length} contas`}
+            subtitle={`${overdueBills.length} ${t.bills || 'contas'}`}
           />
           <BilledCard
-            title="Total"
+            title={t.totalBills || 'Total'}
             amount={stats.pending + stats.paid + stats.overdue}
             icon={DollarSign}
             color="bg-purple-500"
-            subtitle={`${bills.length} contas`}
+            subtitle={`${bills.length} ${t.bills || 'contas'}`}
           />
         </div>
 
@@ -323,7 +342,7 @@ export default function BillsManager({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
-                  placeholder="Buscar contas..."
+                  placeholder={t.searchBills || 'Buscar contas...'}
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -360,10 +379,10 @@ export default function BillsManager({
               onChange={e => setStatusFilter(e.target.value as 'all' | 'pending' | 'paid' | 'overdue')}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">Todas</option>
-              <option value="pending">Pendentes</option>
-              <option value="paid">Pagas</option>
-              <option value="overdue">Vencidas</option>
+              <option value="all">{t.allBills || 'Todas'}</option>
+              <option value="pending">{t.pendingBills || 'Pendentes'}</option>
+              <option value="paid">{t.paidBills || 'Pagas'}</option>
+              <option value="overdue">{t.overdueBills || 'Vencidas'}</option>
             </select>
           </div>
         </div>
@@ -374,20 +393,20 @@ export default function BillsManager({
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membro</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimento</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.tableDescription || 'Descrição'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.tableCategory || 'Categoria'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.tableMember || 'Membro'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.tableValue || 'Valor'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.tableDueDate || 'Vencimento'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.tableStatus || 'Status'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.tableActions || 'Ações'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredBills.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                      Nenhuma conta encontrada
+                      {t.noBillsFound || 'Nenhuma conta encontrada'}
                     </td>
                   </tr>
                 ) : (
@@ -404,7 +423,7 @@ export default function BillsManager({
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{bill.description}</div>
                           {bill.recurring && (
-                            <div className="text-xs text-gray-500">🔄 Recorrente</div>
+                            <div className="text-xs text-gray-500">🔄 {t.recurring || 'Recorrente'}</div>
                           )}
                         </td>
                         <td className="px-6 py-4">
@@ -447,21 +466,21 @@ export default function BillsManager({
                         <td className="px-6 py-4 text-sm text-gray-600">
                           <div>{new Date(bill.due_date).toLocaleDateString(language)}</div>
                           {bill.status === 'paid' && bill.paid_date && (
-                            <div className="text-xs text-gray-500">Pagamento: {new Date(bill.paid_date).toLocaleDateString(language)}</div>
+                            <div className="text-xs text-gray-500">{t.paidDate || 'Pagamento:'} {new Date(bill.paid_date).toLocaleDateString(language)}</div>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           {bill.status === 'paid' ? (
                             <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full flex items-center gap-1 w-fit">
-                              <CheckCircle2 size={12} /> Paga
+                              <CheckCircle2 size={12} /> {t.paid || 'Paga'}
                             </span>
                           ) : isOverdue ? (
                             <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full flex items-center gap-1 w-fit">
-                              <AlertCircle size={12} /> Vencida
+                              <AlertCircle size={12} /> {t.overdue || 'Vencida'}
                             </span>
                           ) : (
                             <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full flex items-center gap-1 w-fit">
-                              <Clock size={12} /> Vence em {daysUntilDue}d
+                              <Clock size={12} /> {t.daysUntil || 'Vence em'} {daysUntilDue}d
                             </span>
                           )}
                         </td>
@@ -472,7 +491,7 @@ export default function BillsManager({
                                 onClick={() => handleMarkAsPaidClick(bill)}
                                 disabled={submitting}
                                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                                title="Marcar como paga"
+                              title={t.markAsPaid || 'Marcar como paga'}
                               >
                                 <Check size={18} />
                               </button>
@@ -480,14 +499,14 @@ export default function BillsManager({
                             <button
                               onClick={() => onOpenModal(bill)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                              title="Editar"
+                              title={t.edit || 'Editar'}
                             >
                               <Edit2 size={18} />
                             </button>
                             <button
                               onClick={() => handleDeleteClick(bill.id)}
                               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                              title="Excluir"
+                              title={t.delete || 'Excluir'}
                             >
                               <Trash2 size={18} />
                             </button>
@@ -514,25 +533,6 @@ export default function BillsManager({
                     <li key={bill.id}>• {bill.description} - {formatCurrency(bill.amount)}</li>
                   ))}
                   {overdueBills.length > 3 && <li>• ... e mais {overdueBills.length - 3}</li>}
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Próximas a vencer */}
-        {upcomingBills.length > 0 && (
-          <div className="mt-8 bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg">
-            <div className="flex gap-3">
-              <Clock className="text-orange-600 flex-shrink-0" size={24} />
-              <div>
-                <h3 className="font-bold text-orange-800 mb-2">📅 Próximas contas a vencer (até 7 dias)</h3>
-                <ul className="text-orange-700 text-sm space-y-1">
-                  {upcomingBills.map(bill => (
-                    <li key={bill.id}>
-                      • {bill.description} - {formatCurrency(bill.amount)} (vence em {bill.daysUntilDue} dia{bill.daysUntilDue !== 1 ? 's' : ''})
-                    </li>
-                  ))}
                 </ul>
               </div>
             </div>

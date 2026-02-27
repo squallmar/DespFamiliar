@@ -8,6 +8,8 @@ interface FamilyMemberSelectorProps {
   label: string;
   optional?: boolean;
   className?: string;
+  optionalText?: string;
+  nobodyText?: string;
 }
 
 export default function FamilyMemberSelector({
@@ -16,7 +18,9 @@ export default function FamilyMemberSelector({
   onChange,
   label,
   optional = true,
-  className = ''
+  className = '',
+  optionalText = '(Opcional)',
+  nobodyText = 'Ninguém específico'
 }: FamilyMemberSelectorProps) {
   const selected = members.find(m => m.id === value);
 
@@ -24,7 +28,7 @@ export default function FamilyMemberSelector({
     <div className={className}>
       <label className="block text-sm font-semibold text-gray-700 mb-2">
         {label}
-        {optional && <span className="text-gray-400 ml-1">(Opcional)</span>}
+        {optional && <span className="text-gray-400 ml-1">{optionalText}</span>}
       </label>
       <div className="flex items-center gap-2">
         <select
@@ -32,7 +36,7 @@ export default function FamilyMemberSelector({
           onChange={(e) => onChange(e.target.value || undefined)}
           className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
         >
-          <option value="">Ninguém específico</option>
+          <option value="">{nobodyText}</option>
           {members.map(member => (
             <option key={member.id} value={member.id}>
               {member.avatar} {member.name}

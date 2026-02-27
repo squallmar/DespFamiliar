@@ -37,7 +37,16 @@ export default function FamilyMembersPage() {
 
   const AVATARS = ['👤', '👨', '👩', '👦', '👧', '🧑', '👨‍🦰', '👩‍🦰', '👨‍🦱', '👩‍🦱'];
   const COLORS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#14B8A6'];
-  const RELATIONS = ['Pai', 'Mãe', 'Filho', 'Filha', 'Cônjuge', 'Avó', 'Avô', 'Outro'];
+  const RELATIONS = [
+    t('relationFather', 'Pai'),
+    t('relationMother', 'Mãe'),
+    t('relationSon', 'Filho'),
+    t('relationDaughter', 'Filha'),
+    t('relationSpouse', 'Cônjuge'),
+    t('relationGrandmother', 'Avó'),
+    t('relationGrandfather', 'Avô'),
+    t('relationOther', 'Outro'),
+  ];
 
   useEffect(() => {
     fetchMembers();
@@ -51,7 +60,7 @@ export default function FamilyMembersPage() {
       const { members } = await res.json();
       setMembers(members);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar membros');
+      setError(err instanceof Error ? err.message : t('errorLoadingMembers', 'Erro ao carregar membros'));
     } finally {
       setLoading(false);
     }
@@ -77,18 +86,24 @@ export default function FamilyMembersPage() {
       setEditingId(null);
       setFormData({ name: '', avatar: '👤', color: '#6366F1', relation: '', notes: '' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar membro');
+      setError(err instanceof Error ? err.message : t('errorSavingMember', 'Erro ao salvar membro'));
     }
   };
 
   const handleEdit = (member: FamilyMember) => {
-    setFormData(member);
+    setFormData({
+      name: member.name,
+      avatar: member.avatar,
+      color: member.color,
+      relation: member.relation || '',
+      notes: member.notes || '',
+    });
     setEditingId(member.id);
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover este membro?')) return;
+    if (!confirm(t('confirmDeleteMember', 'Tem certeza que deseja remover este membro?'))) return;
     try {
       const res = await fetch(`/api/family-members?id=${id}`, {
         method: 'DELETE',
@@ -97,7 +112,7 @@ export default function FamilyMembersPage() {
       if (!res.ok) throw new Error('Failed to delete member');
       await fetchMembers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao remover membro');
+      setError(err instanceof Error ? err.message : t('errorRemovingMember', 'Erro ao remover membro'));
     }
   };
 
@@ -108,9 +123,9 @@ export default function FamilyMembersPage() {
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-                👨‍👩‍👧‍👦 Membros Familiares
+                👨‍👩‍👧‍👦 {t('familyMembersTitle', 'Membros Familiares')}
               </h1>
-              <p className="text-lg text-gray-600">Gerencie os membros da sua família e rastreie quem gasta o quê</p>
+              <p className="text-lg text-gray-600">{t('familyMembersSubtitle', 'Gerencie os membros da sua família e rastreie quem gasta o quê')}</p>
             </div>
             <button
               onClick={() => {
@@ -120,7 +135,7 @@ export default function FamilyMembersPage() {
               }}
               className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition"
             >
-              <Plus className="w-5 h-5" /> Novo Membro
+              <Plus className="w-5 h-5" /> {t('newMember', 'Novo Membro')}
             </button>
           </div>
 
@@ -132,29 +147,29 @@ export default function FamilyMembersPage() {
 
           {showForm && (
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
-              <h2 className="text-2xl font-bold mb-6">{editingId ? 'Editar Membro' : 'Novo Membro'}</h2>
+              <h2 className="text-2xl font-bold mb-6">{editingId ? t('editMember', 'Editar Membro') : t('newMember', 'Novo Membro')}</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Nome *</label>
+                    <label className="block text-sm font-semibold mb-2">{t('memberName', 'Nome')} *</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="Nome do membro"
+                      placeholder={t('memberNamePlaceholder', 'Nome do membro')}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Parentesco</label>
+                    <label className="block text-sm font-semibold mb-2">{t('memberRelation', 'Parentesco')}</label>
                     <select
                       value={formData.relation}
                       onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     >
-                      <option value="">Selecionar...</option>
+                      <option value="">{t('selectRelation', 'Selecionar...')}</option>
                       {RELATIONS.map(rel => (
                         <option key={rel} value={rel}>{rel}</option>
                       ))}
@@ -164,7 +179,7 @@ export default function FamilyMembersPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Avatar</label>
+                    <label className="block text-sm font-semibold mb-2">{t('memberAvatar', 'Avatar')}</label>
                     <div className="flex flex-wrap gap-2">
                       {AVATARS.map(avatar => (
                         <button
@@ -182,7 +197,7 @@ export default function FamilyMembersPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Cor</label>
+                    <label className="block text-sm font-semibold mb-2">{t('memberColor', 'Cor')}</label>
                     <div className="flex flex-wrap gap-2">
                       {COLORS.map(color => (
                         <button
@@ -201,12 +216,12 @@ export default function FamilyMembersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Notas</label>
+                  <label className="block text-sm font-semibold mb-2">{t('memberNotes', 'Notas')}</label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Observações (opcional)"
+                    placeholder={t('optionalNotesPlaceholder', 'Observações (opcional)')}
                     rows={3}
                   />
                 </div>
@@ -221,13 +236,13 @@ export default function FamilyMembersPage() {
                     }}
                     className="px-6 py-2 border rounded-lg hover:bg-gray-50 font-semibold transition"
                   >
-                    Cancelar
+                    {t('cancel', 'Cancelar')}
                   </button>
                   <button
                     type="submit"
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition"
                   >
-                    {editingId ? 'Atualizar' : 'Criar'}
+                    {editingId ? t('updateMember', 'Atualizar') : t('createMember', 'Criar')}
                   </button>
                 </div>
               </form>
@@ -240,12 +255,12 @@ export default function FamilyMembersPage() {
             </div>
           ) : members.length === 0 ? (
             <div className="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-100">
-              <p className="text-lg text-gray-500 mb-4">Nenhum membro cadastrado</p>
+              <p className="text-lg text-gray-500 mb-4">{t('noMembersYet', 'Nenhum membro cadastrado')}</p>
               <button
                 onClick={() => setShowForm(true)}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold inline-flex items-center gap-2"
               >
-                <Plus className="w-4 h-4" /> Adicionar primeiro membro
+                <Plus className="w-4 h-4" /> {t('addFirstMember', 'Adicionar primeiro membro')}
               </button>
             </div>
           ) : (
@@ -271,7 +286,7 @@ export default function FamilyMembersPage() {
                     <div
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: member.color }}
-                      title="Cor identificadora"
+                      title={t('identifierColor', 'Cor identificadora')}
                     />
                   </div>
 
@@ -283,16 +298,16 @@ export default function FamilyMembersPage() {
                     <button
                       onClick={() => handleEdit(member)}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition"
-                      title="Editar"
+                      title={t('editMember', 'Editar')}
                     >
-                      <Edit2 className="w-4 h-4" /> Editar
+                      <Edit2 className="w-4 h-4" /> {t('editMember', 'Editar')}
                     </button>
                     <button
                       onClick={() => handleDelete(member.id)}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-semibold transition"
-                      title="Remover"
+                      title={t('deleteMember', 'Remover')}
                     >
-                      <Trash2 className="w-4 h-4" /> Remover
+                      <Trash2 className="w-4 h-4" /> {t('deleteMember', 'Remover')}
                     </button>
                   </div>
                 </div>

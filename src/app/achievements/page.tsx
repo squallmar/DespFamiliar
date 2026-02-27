@@ -147,7 +147,7 @@ export default function AchievementsPage() {
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-600 text-sm">{t?.noAchievements || 'Nenhuma conquista ainda.'}</p>
-            <p className="text-gray-500 text-xs mt-1">Comece a registrar despesas para ganhar conquistas!</p>
+            <p className="text-gray-500 text-xs mt-1">{t?.startTrackingExpenses || 'Comece a registrar despesas para ganhar conquistas!'}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

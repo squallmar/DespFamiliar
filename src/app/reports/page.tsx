@@ -211,7 +211,7 @@ export default function ReportsPage() {
   const [proventosMonth, setProventosMonth] = useState<string>(() => getCurrentMonthKey(new Date()));
   const [proventosInput, setProventosInput] = useState<string>('');
   const [proventosValue, setProventosValue] = useState<number>(0);
-  const [proventosSource, setProventosSource] = useState<string>('Salário');
+  const [proventosSource, setProventosSource] = useState<string>(t('incomeSalary', 'Salário'));
   const [proventosNotes, setProventosNotes] = useState<string>('');
   const [proventosRecurring, setProventosRecurring] = useState<boolean>(false);
   const [proventosRecurringType, setProventosRecurringType] = useState<'monthly'|'yearly'|'none'>('monthly');
@@ -229,7 +229,7 @@ export default function ReportsPage() {
               const amount = Number(item.amount) || 0;
               setProventosValue(amount);
               setProventosInput(String(amount));
-              setProventosSource(item.source || 'Salário');
+              setProventosSource(item.source || t('incomeSalary', 'Salário'));
               setProventosNotes(item.notes || '');
               setProventosRecurring(Boolean(item.recurring));
               setProventosRecurringType(item.recurring_type || 'monthly');
@@ -244,7 +244,7 @@ export default function ReportsPage() {
                   const num = Number(parsed.amount ?? parsed);
                   setProventosValue(Number.isFinite(num) ? num : 0);
                   setProventosInput(String(num || ''));
-                  setProventosSource(parsed.source || 'Salário');
+                  setProventosSource(parsed.source || t('incomeSalary', 'Salário'));
                   setProventosNotes(parsed.notes || '');
                   setProventosRecurring(Boolean(parsed.recurring));
                   setProventosRecurringType(parsed.recurring_type || 'monthly');
@@ -252,7 +252,7 @@ export default function ReportsPage() {
                   const num = Number(raw);
                   setProventosValue(Number.isFinite(num) ? num : 0);
                   setProventosInput(String(num));
-                  setProventosSource('Salário');
+                  setProventosSource(t('incomeSalary', 'Salário'));
                   setProventosNotes('');
                   setProventosRecurring(false);
                   setProventosRecurringType('monthly');
@@ -260,7 +260,7 @@ export default function ReportsPage() {
               } else {
                 setProventosValue(0);
                 setProventosInput('');
-                setProventosSource('Salário');
+                setProventosSource(t('incomeSalary', 'Salário'));
                 setProventosNotes('');
                 setProventosRecurring(false);
                 setProventosRecurringType('monthly');
@@ -270,7 +270,7 @@ export default function ReportsPage() {
           .catch(() => {
             setProventosValue(0);
             setProventosInput('');
-            setProventosSource('Salário');
+            setProventosSource(t('incomeSalary', 'Salário'));
             setProventosNotes('');
             setProventosRecurring(false);
             setProventosRecurringType('monthly');
@@ -311,10 +311,10 @@ export default function ReportsPage() {
             if (res.ok && json.items && json.items.length > 0) {
               const item = json.items[0];
               const putRes = await fetch('/api/incomes', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, month: monthKey, amount: value, source: proventosSource, notes: proventosNotes, recurring: proventosRecurring, recurring_type: proventosRecurringType }) });
-              if (!putRes.ok) throw new Error('Erro ao atualizar proventos');
+              if (!putRes.ok) throw new Error(t('incomeUpdateError', 'Erro ao atualizar proventos'));
             } else {
               const postRes = await fetch('/api/incomes', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: monthKey, amount: value, source: proventosSource, notes: proventosNotes, recurring: proventosRecurring, recurring_type: proventosRecurringType }) });
-              if (!postRes.ok) throw new Error('Erro ao criar proventos');
+              if (!postRes.ok) throw new Error(t('incomeCreateError', 'Erro ao criar proventos'));
             }
             setProventosValue(value);
             setProventosInput(String(value));
@@ -540,7 +540,7 @@ export default function ReportsPage() {
                   <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 flex flex-col items-start border border-indigo-200">
                     <div className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">{t('totalExpenses')}</div>
                     <div className="text-4xl font-bold text-indigo-700 mb-1">{formatCurrency(Number(summary.total))}</div>
-                    <div className="text-sm text-indigo-600">{formatDate(summary.from)} até {formatDate(summary.to)}</div>
+                    <div className="text-sm text-indigo-600">{formatDate(summary.from)} {t('dateTo', 'até')} {formatDate(summary.to)}</div>
                   </div>
                   <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
                     <div className="font-bold text-green-700 mb-4 text-lg">{t('topCategories')}</div>
@@ -775,32 +775,82 @@ export default function ReportsPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3">{t('dailyEvolution')}</h3>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={dailyDataForChart} margin={{ left: 16, right: 16 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" tickFormatter={(d: string) => new Date(d).toLocaleDateString(language || 'en-US')} minTickGap={24} />
-                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={100} />
-                        <Tooltip labelFormatter={(d) => new Date(String(d)).toLocaleDateString(language || 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })} formatter={(v: number) => formatCurrency(Number(v))} />
-                        <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div className="bg-white rounded-lg p-5 shadow-md">
+                    <h3 className="font-semibold text-gray-800 mb-4">{t('dailyEvolution')}</h3>
+                    <div className="overflow-x-auto flex justify-center">
+                      <ResponsiveContainer width={900} height={252}>
+                        <LineChart data={dailyDataForChart} margin={{ left: 65, right: 16, top: 5, bottom: 30 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={true} />
+                          <XAxis 
+                            dataKey="day" 
+                            tickFormatter={(d: string) => new Date(d).toLocaleDateString(language || 'en-US')} 
+                            minTickGap={24}
+                            tick={{ fontSize: 12, fill: '#666' }}
+                            axisLine={{ stroke: '#666' }}
+                          />
+                          <YAxis 
+                            tickFormatter={(v) => formatCurrency(Number(v))} 
+                            width={60}
+                            tick={{ fontSize: 12, fill: '#666' }}
+                            axisLine={{ stroke: '#666' }}
+                          />
+                          <Tooltip 
+                            labelFormatter={(d) => new Date(String(d)).toLocaleDateString(language || 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })} 
+                            formatter={(v: number) => formatCurrency(Number(v))}
+                            contentStyle={{ 
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #cccccc'
+                            }}
+                          />
+                          <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3">{t('monthlyTotals')}</h3>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyDataForChart} margin={{ left: 16, right: 16 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="ym" />
-                        <YAxis tickFormatter={(v) => formatCurrency(Number(v))} width={100} />
-                        <Tooltip formatter={(v: number) => formatCurrency(Number(v))} />
-                        <Bar dataKey="total" fill="#10b981" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="bg-white rounded-lg p-5 shadow-md">
+                    <h3 className="font-semibold text-gray-800 mb-4">{t('monthlyTotals')}</h3>
+                    <div className="overflow-x-auto flex justify-center">
+                      <ResponsiveContainer 
+                        width={Math.max(900, monthlyDataForChart.length * 65)} 
+                        height={252}
+                      >
+                        <BarChart 
+                          data={monthlyDataForChart} 
+                          margin={{ left: 65, right: 16, top: 5, bottom: 30 }}
+                          maxBarSize={40}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ccc" vertical={true} />
+                          <XAxis 
+                            dataKey="ym" 
+                            tick={{ fontSize: 12, fill: '#666' }}
+                            axisLine={{ stroke: '#666' }}
+                          />
+                          <YAxis 
+                            tickFormatter={(v) => formatCurrency(Number(v))} 
+                            width={60}
+                            tick={{ fontSize: 12, fill: '#666' }}
+                            axisLine={{ stroke: '#666' }}
+                          />
+                          <Tooltip 
+                            formatter={(v: number) => formatCurrency(Number(v))}
+                            contentStyle={{ 
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #cccccc'
+                            }}
+                          />
+                          <Bar 
+                            dataKey="total" 
+                            fill="#ef4444"
+                            isAnimationActive={true}
+                            animationDuration={600}
+                            barSize={40}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
               </div>

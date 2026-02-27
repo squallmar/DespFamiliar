@@ -4,9 +4,14 @@ import { useEffect, useState } from 'react';
 import ProventosAdvancedCard from '@/components/ProventosAdvancedCard';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
+import translations, { resolveLanguage } from '@/lib/translations';
 import { Loader2 } from 'lucide-react';
 
 export default function IncomePage() {
+  const { language } = useLocation();
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [currentPeriod] = useState<{ month: number; year: number }>({
@@ -58,8 +63,8 @@ export default function IncomePage() {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">💰 Proventos do Mês</h1>
-          <p className="text-gray-600">Gerencie seus proventos (renda) mensais</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">💰 {t.monthlyIncome || 'Proventos'}</h1>
+          <p className="text-gray-600">{t.manageMonthlyIncome || 'Gerencie seus proventos (renda) mensais'}</p>
         </div>
 
         {/* Componente Avançado de Proventos */}

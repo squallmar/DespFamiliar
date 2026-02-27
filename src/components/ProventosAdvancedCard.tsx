@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { PiggyBank, TrendingUp, TrendingDown, Plus, Edit2, Trash2, Briefcase, LineChart as LineChartIcon, Wallet, Gift, Target, AlertCircle, User } from 'lucide-react';
+import { PiggyBank, TrendingUp, TrendingDown, Plus, Edit2, Trash2, Briefcase, LineChart as LineChartIcon, Wallet, Gift, Target, AlertCircle, User, Bell } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useLocation } from '@/contexts/LocationContext';
+import translations, { resolveLanguage } from '@/lib/translations';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
 
@@ -38,25 +39,26 @@ const SOURCE_COLORS = {
   other: 'bg-gray-500'
 };
 
-const SOURCE_LABELS = {
-  salary: 'Salário',
-  freelance: 'Freelance',
-  investment: 'Investimentos',
-  gift: 'Presentes/Bônus',
-  other: 'Outros'
-};
-
 function getStorageKey(period: { month: number; year: number }) {
   return `proventos_sources_${period.year}-${String(period.month).padStart(2, '0')}`;
 }
 
 export default function ProventosAdvancedCard({ period, totalExpenses, onTotalChange }: ProventosAdvancedCardProps) {
   const { language, currency } = useLocation();
+  const langKey = resolveLanguage(language);
+  const t = translations[langKey] || translations['pt-BR'];
   const { user } = useAuth();
   const { members: familyMembers } = useFamilyMembers();
   const formatCurrency = (value: number) => new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
   const monthKey = `${period.year}-${String(period.month).padStart(2, '0')}`;
 
+  const SOURCE_LABELS = {
+    salary: t.salary || 'Salário',
+    freelance: t.freelance || 'Freelance',
+    investment: t.investment || 'Investimentos',
+    gift: t.gift || 'Presentes/Bônus',
+    other: t.other || 'Outros'
+  };
   const [sources, setSources] = useState<ProventosSource[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSource, setEditingSource] = useState<ProventosSource | null>(null);
@@ -332,7 +334,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
             <PiggyBank className="text-white" size={28} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Proventos do Mês</h2>
+            <h2 className="text-2xl font-bold text-gray-800">{t.incomeMonthTitle || 'Proventos'}</h2>
             <p className="text-gray-600 text-sm">
               {new Date(period.year, period.month - 1).toLocaleDateString(language, { month: 'long', year: 'numeric' })}
             </p>
@@ -342,7 +344,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
           onClick={() => setShowHistory(!showHistory)}
           className="px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-sm font-medium text-gray-700"
         >
-          {showHistory ? 'Ocultar' : 'Ver'} Histórico
+          {showHistory ? (t.hide || 'Ocultar') : (t.show || 'Ver')} {t.history || 'Histórico'}
         </button>
       </div>
 
@@ -351,7 +353,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
         {/* Total de Proventos */}
         <div className="bg-white rounded-lg p-5 shadow-md">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">Total de Proventos</span>
+            <span className="text-sm font-medium text-gray-600">{t.totalIncome || 'Total de Proventos'}</span>
             {percentChange !== 0 && (
               <span className={`flex items-center text-xs font-semibold ${percentChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {percentChange > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
@@ -362,7 +364,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
           <p className="text-3xl font-bold text-emerald-600">{formatCurrency(totalProventos)}</p>
           {previousMonthTotal > 0 && (
             <p className="text-xs text-gray-500 mt-1">
-              Mês anterior: {formatCurrency(previousMonthTotal)}
+              {t.previousMonth || 'Mês anterior:'} {formatCurrency(previousMonthTotal)}
             </p>
           )}
         </div>
@@ -370,25 +372,28 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
         {/* Saldo */}
         <div className={`bg-white rounded-lg p-5 shadow-md ${isDeficit ? 'ring-2 ring-red-400' : ''}`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">Saldo</span>
+            <span className="text-sm font-medium text-gray-600">{t.monthlyBalance || 'Saldo'}</span>
             {isDeficit && (
               <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-1 rounded">
-                DÉFICIT
+                {t.deficit || 'DÉFICIT'}
               </span>
             )}
           </div>
           <p className={`text-3xl font-bold ${isDeficit ? 'text-red-600' : 'text-green-600'}`}>
             {formatCurrency(saldo)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Despesas: {formatCurrency(totalExpenses)}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <Bell size={14} className="text-red-600 animate-pulse" />
+            <p className="text-xs text-red-600 font-semibold">
+              {t.expenses || 'Despesas'}: {formatCurrency(totalExpenses)}
+            </p>
+          </div>
         </div>
 
         {/* Taxa de Poupança */}
         <div className="bg-white rounded-lg p-5 shadow-md">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">Taxa de Poupança</span>
+            <span className="text-sm font-medium text-gray-600">{t.savingsRate || 'Taxa de Poupança'}</span>
             <Target size={16} className="text-gray-400" />
           </div>
           <p className={`text-3xl font-bold ${savingsRate >= 20 ? 'text-green-600' : savingsRate >= 10 ? 'text-yellow-600' : 'text-red-600'}`}>
@@ -401,7 +406,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
             ></div>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            {savingsRate >= 20 ? '🎉 Excelente!' : savingsRate >= 10 ? '👍 Bom' : '⚠️ Precisa melhorar'}
+            {savingsRate >= 20 ? `🎉 ${t.excellent || 'Excelente!'}` : savingsRate >= 10 ? `👍 ${t.good || 'Bom'}` : `⚠️ ${t.needsImprovement || 'Precisa melhorar'}`}
           </p>
         </div>
       </div>
@@ -412,21 +417,21 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
           <div className="flex items-start gap-3">
             <AlertCircle className="text-red-600 mt-1" size={20} />
             <div className="flex-1">
-              <h3 className="font-semibold text-red-800 mb-1">Atenção!</h3>
+              <h3 className="font-semibold text-red-800 mb-1">{t.attention || 'Atenção!'}</h3>
               {isDeficit && (
                 <p className="text-sm text-red-700 mb-2">
                   Suas despesas estão <strong>{formatCurrency(Math.abs(saldo))}</strong> acima dos seus proventos. 
-                  É necessário reduzir gastos ou aumentar renda.
+                  {t.reduceCostsIncreaseIncome || 'É necessário reduzir gastos ou aumentar renda.'}
                 </p>
               )}
               {!isDeficit && savingsRate < 10 && (
                 <p className="text-sm text-red-700 mb-2">
-                  Sua taxa de poupança está muito baixa. Tente economizar pelo menos 10-20% da sua renda.
+                  {t.lowSavingsRateWarning || 'Sua taxa de poupança está muito baixa. Tente economizar pelo menos 10-20% da sua renda.'}
                 </p>
               )}
               <div className="text-sm text-red-600 space-y-1">
-                <p>💡 <strong>Dica:</strong> Revise suas despesas não essenciais</p>
-                <p>💡 <strong>Meta:</strong> Tente economizar {formatCurrency(totalProventos * 0.2)} este mês (20%)</p>
+                <p>💡 <strong>{t.tip || 'Dica:'}</strong> {t.reviewNonEssential || 'Revise suas despesas não essenciais'}</p>
+                <p>💡 <strong>{t.savingsGoal || 'Meta:'}</strong> {t.trySavingThisMonth || 'Tente economizar'} {formatCurrency(totalProventos * 0.2)} {t.savingsPercent || 'este mês (20%)'}</p>
               </div>
             </div>
           </div>
@@ -438,10 +443,10 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
           <div className="flex items-start gap-3">
             <div className="text-green-600 mt-1">🎉</div>
             <div className="flex-1">
-              <h3 className="font-semibold text-green-800 mb-1">Parabéns!</h3>
+              <h3 className="font-semibold text-green-800 mb-1">{t.congratulations || 'Parabéns!'}</h3>
               <p className="text-sm text-green-700">
-                Você está economizando {formatCurrency(saldo)} este mês, o que representa {savingsRate.toFixed(1)}% 
-                dos seus proventos. Continue assim!
+                {t.youAreSaving || 'Você está economizando'} {formatCurrency(saldo)} {t.monthSavingsRate || 'este mês, o que representa'} {savingsRate.toFixed(1)}% 
+                {t.ofYourIncome || 'de sua renda'}. Continue assim!
               </p>
             </div>
           </div>
@@ -451,7 +456,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
       {/* Histórico Visual */}
       {showHistory && history.length > 0 && (
         <div className="mb-6 bg-white rounded-lg p-5 shadow-md">
-          <h3 className="font-semibold text-gray-800 mb-4">Histórico de Proventos (6 meses)</h3>
+          <h3 className="font-semibold text-gray-800 mb-4">{t.incomeHistoryTitle || 'Histórico de Proventos (6 meses)'}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={history}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -467,13 +472,13 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
       {/* Lista de Fontes */}
       <div className="bg-white rounded-lg p-5 shadow-md mb-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-800">Fontes de Renda</h3>
+          <h3 className="font-semibold text-gray-800">{t.incomeSources || 'Fontes de Renda'}</h3>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
           >
             <Plus size={16} />
-            Adicionar
+            {t.add || 'Adicionar'}
           </button>
         </div>
 
@@ -482,17 +487,17 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
           <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.name || 'Nome'}</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Salário Principal"
+                  placeholder={t.incomeNamePlaceholder || 'Ex: Salário Principal'}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.amount || 'Valor'}</label>
                 <input
                   type="number"
                   value={formData.amount}
@@ -504,7 +509,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.type || 'Tipo'}</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as ProventosSource['type'] })}
@@ -516,13 +521,13 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">De quem é a renda?</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.whoseIncome || 'De quem é a renda?'}</label>
                 <select
                   value={formData.memberId}
                   onChange={(e) => setFormData({ ...formData, memberId: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:outline-none"
                 >
-                  <option value="">Selecione um membro (opcional)</option>
+                  <option value="">{t.selectMemberOptional || 'Selecione um membro (opcional)'}</option>
                   {familyMembers.map(member => (
                     <option key={member.id} value={member.id}>{member.name}</option>
                   ))}
@@ -536,7 +541,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                     onChange={(e) => setFormData({ ...formData, recurring: e.target.checked })}
                     className="w-4 h-4 text-emerald-500 rounded focus:ring-2 focus:ring-emerald-400"
                   />
-                  <span className="text-sm text-gray-700">Receita recorrente</span>
+                  <span className="text-sm text-gray-700">{t.recurringIncome || 'Receita recorrente'}</span>
                 </label>
               </div>
             </div>
@@ -545,13 +550,13 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                 onClick={handleAddSource}
                 className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
               >
-                {editingSource ? 'Atualizar' : 'Adicionar'}
+                {editingSource ? (t.update || 'Atualizar') : (t.add || 'Adicionar')}
               </button>
               <button
                 onClick={cancelEdit}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
               >
-                Cancelar
+                {t.cancel || 'Cancelar'}
               </button>
             </div>
           </div>
@@ -561,8 +566,8 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
         {sources.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <PiggyBank size={48} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Nenhuma fonte de renda adicionada</p>
-            <p className="text-xs mt-1">Clique em &quot;Adicionar&quot; para começar</p>
+            <p className="text-sm">{t.noIncomeSourceAdded || 'Nenhuma fonte de renda adicionada'}</p>
+            <p className="text-xs mt-1">{t.clickAddToStart || 'Clique em "Adicionar" para começar'}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -587,7 +592,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                           </span>
                         )}
                         {source.recurring && (
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Recorrente</span>
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{t.recurring || 'Recorrente'}</span>
                         )}
                       </div>
                       <p className="text-xs text-gray-500">{SOURCE_LABELS[source.type]}</p>
@@ -618,14 +623,14 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
       {/* Gráfico de Distribuição por Tipo */}
       {comparisonData.length > 0 && (
         <div className="bg-white rounded-lg p-5 shadow-md">
-          <h3 className="font-semibold text-gray-800 mb-4">Distribuição por Tipo</h3>
+          <h3 className="font-semibold text-gray-800 mb-4">{t.distributionByType || 'Distribuição por Tipo'}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={comparisonData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis tickFormatter={(v) => formatCurrency(v)} />
               <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Valor']} />
-              <Bar dataKey="value" fill="#10b981" />
+              <Bar dataKey="value" fill="#10b981" maxBarSize={80} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -96,7 +96,7 @@ export default function Navigation() {
             </Link>
 
             {/* Links desktop */}
-            <div className="hidden lg:ml-8 lg:flex lg:space-x-1">
+            <div className="hidden lg:ml-8 lg:flex lg:space-x-3 lg:mr-4">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = pathname === link.href;

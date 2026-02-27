@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import BillsManager from '@/components/BillsManager';
 import FamilyMemberSelector from '@/components/FamilyMemberSelector';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
+import { useTranslation } from '@/lib/translations';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
+import { useAlerts } from '@/hooks/useData';
 import { Loader2, X } from 'lucide-react';
+import { AlertItem } from '@/types';
 
 interface Bill {
   id: string;
@@ -37,7 +41,10 @@ interface Category {
 export default function BillsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { language } = useLocation();
+  const { t } = useTranslation(language);
   const { members: familyMembers } = useFamilyMembers();
+  const { alerts } = useAlerts();
 
   const [bills, setBills] = useState<Bill[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -46,6 +53,11 @@ export default function BillsPage() {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear()
   });
+
+  // Filter bills from alerts for upcoming bills section
+  const upcomingBills = useMemo(() => {
+    return alerts.filter((alert: AlertItem) => alert.type === 'bill');
+  }, [alerts]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
@@ -236,21 +248,18 @@ export default function BillsPage() {
 
   return (
     <>
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Gerenciador de Contas */}
-          <BillsManager
-            onOpenModal={openModal}
-            bills={bills}
-            loading={loading}
-            onDelete={handleDelete}
-            onMarkAsPaid={handleMarkAsPaid}
-            period={period}
-            onPeriodChange={setPeriod}
-            familyMembers={familyMembers}
-          />
-        </div>
-      </div>
+      {/* Gerenciador de Contas */}
+      <BillsManager
+        onOpenModal={openModal}
+        bills={bills}
+        loading={loading}
+        onDelete={handleDelete}
+        onMarkAsPaid={handleMarkAsPaid}
+        period={period}
+        onPeriodChange={setPeriod}
+        familyMembers={familyMembers}
+        upcomingBills={upcomingBills}
+      />
 
       {/* Modal */}
       {showModal && (
@@ -259,7 +268,7 @@ export default function BillsPage() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {editingBill ? 'Editar Conta' : 'Nova Conta'}
+                  {editingBill ? t('editBill', 'Editar Conta') : t('newBill', 'Nova Conta')}
                 </h2>
                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                   <X size={24} />
@@ -268,7 +277,7 @@ export default function BillsPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descrição *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('description', 'Descrição')} *</label>
                   <input
                     type="text"
                     value={formData.description}
@@ -280,7 +289,7 @@ export default function BillsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('value', 'Valor')} *</label>
                     <input
                       type="number"
                       step="0.01"
@@ -292,7 +301,7 @@ export default function BillsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vencimento *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('dueDate', 'Vencimento')} *</label>
                     <input
                       type="date"
                       value={formData.dueDate}
@@ -305,13 +314,13 @@ export default function BillsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('category', 'Categoria')}</label>
                     <select
                       value={formData.categoryId}
                       onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Sem categoria</option>
+                      <option value="">{t('noCategory', 'Sem categoria')}</option>
                       {categories.map(cat => (
                         <option key={cat.id} value={cat.id}>
                           {cat.icon} {cat.name}
@@ -321,21 +330,21 @@ export default function BillsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('status', 'Status')}</label>
                     <select
                       value={formData.status}
                       onChange={e => setFormData({ ...formData, status: e.target.value as 'pending' | 'paid' })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="pending">Pendente</option>
-                      <option value="paid">Paga</option>
+                      <option value="pending">{t('pending', 'Pendente')}</option>
+                      <option value="paid">{t('paid', 'Paga')}</option>
                     </select>
                   </div>
                 </div>
 
                 {formData.status === 'paid' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Data de Pagamento</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('paymentDate', 'Data de Pagamento')}</label>
                     <input
                       type="date"
                       value={formData.paidDate}
@@ -353,28 +362,28 @@ export default function BillsPage() {
                       onChange={e => setFormData({ ...formData, recurring: e.target.checked })}
                       className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">Conta recorrente</span>
+                    <span className="text-sm font-medium text-gray-700">{t('recurringBill', 'Conta recorrente')}</span>
                   </label>
                 </div>
 
                 {formData.recurring && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Recorrência</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('recurrenceType', 'Tipo de Recorrência')}</label>
                     <select
                       value={formData.recurringType}
                       onChange={e => setFormData({ ...formData, recurringType: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Selecione</option>
-                      <option value="monthly">Mensal</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="yearly">Anual</option>
+                      <option value="">{t('selectOption', 'Selecione')}</option>
+                      <option value="monthly">{t('monthly', 'Mensal')}</option>
+                      <option value="weekly">{t('weekly', 'Semanal')}</option>
+                      <option value="yearly">{t('yearly', 'Anual')}</option>
                     </select>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('memberNotes', 'Observações')}</label>
                   <textarea
                     value={formData.notes}
                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
@@ -389,15 +398,19 @@ export default function BillsPage() {
                       members={familyMembers}
                       value={formData.spentBy}
                       onChange={(value) => setFormData({ ...formData, spentBy: value })}
-                      label="Quem Gastou"
+                      label={t('spentBy', 'Quem Gastou')}
                       optional={true}
+                      optionalText={t('optional', '(Opcional)')}
+                      nobodyText={t('nobodySpecific', 'Ninguém específico')}
                     />
                     <FamilyMemberSelector
                       members={familyMembers}
                       value={formData.paidBy}
                       onChange={(value) => setFormData({ ...formData, paidBy: value })}
-                      label="Quem Pagou"
+                      label={t('paidBy', 'Quem Pagou')}
                       optional={true}
+                      optionalText={t('optional', '(Opcional)')}
+                      nobodyText={t('nobodySpecific', 'Ninguém específico')}
                     />
                   </div>
                 )}
@@ -408,7 +421,7 @@ export default function BillsPage() {
                     onClick={closeModal}
                     className="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 cursor-pointer"
                   >
-                    Cancelar
+                    {t('cancel', 'Cancelar')}
                   </button>
                   <button
                     type="submit"
@@ -418,10 +431,10 @@ export default function BillsPage() {
                     {submitting ? (
                       <>
                         <Loader2 className="animate-spin" size={18} />
-                        Salvando...
+                        {t('saving', 'Salvando...')}
                       </>
                     ) : (
-                      editingBill ? 'Atualizar' : 'Criar'
+                      editingBill ? t('updateMember', 'Atualizar') : t('createMember', 'Criar')
                     )}
                   </button>
                 </div>
