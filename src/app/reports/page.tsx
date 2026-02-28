@@ -24,7 +24,7 @@ import {
   Bar,
   Legend,
 } from 'recharts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock, Crown, Sparkles } from 'lucide-react';
 
 type SummaryResponse = {
   period: 'week' | 'month';
@@ -101,7 +101,7 @@ export default function ReportsPage() {
 
   // Pix manual
   const handlePix = () => {
-    window.open('https://api.whatsapp.com/send?phone=SEU_NUMERO_PIX&text=Quero%20assinar%20o%20premium%20por%20R$20%20via%20Pix', '_blank');
+    window.open('https://api.whatsapp.com/send?phone=5522998550450&text=Quero%20assinar%20o%20premium%20por%20R$20%20via%20Pix', '_blank');
   };
   // Função para importar extrato bancário
   const handleImportBank = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -535,6 +535,53 @@ export default function ReportsPage() {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">{t('reportsTitle')}</h1>
           <p className="text-lg text-gray-600 mb-8">{t('reportsSubtitle')}</p>
 
+          {/* Premium Upgrade Banner */}
+          {!user?.premium && (
+            <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl shadow-2xl p-8 mb-8 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-10 rounded-full -ml-24 -mb-24"></div>
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Crown className="text-yellow-300" size={32} />
+                    <h2 className="text-3xl font-bold">Desbloqueie Recursos Premium</h2>
+                  </div>
+                  <p className="text-indigo-100 text-lg mb-4">
+                    Você está usando a versão gratuita. Faça upgrade para acessar exportações ilimitadas, backups automáticos e muito mais!
+                  </p>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} />
+                      <span>Exportar PDF/Excel</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} />
+                      <span>Backups Automáticos</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} />
+                      <span>Suporte Prioritário</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => setPaywallOpen(true)}
+                    className="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-indigo-50 transition shadow-lg hover:shadow-xl cursor-pointer whitespace-nowrap"
+                  >
+                    Assinar Agora
+                  </button>
+                  <button
+                    onClick={handleOpenCoupon}
+                    className="px-8 py-3 bg-indigo-700 text-white rounded-xl font-semibold hover:bg-indigo-800 transition cursor-pointer whitespace-nowrap"
+                  >
+                    Tenho um cupom
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
             {/* Painel de Resumo */}
             <div className="mb-8">
@@ -679,22 +726,32 @@ export default function ReportsPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              <label className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg" style={{ cursor: 'pointer' }}>
+                <label className={`px-4 py-3 rounded-lg disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg ${
+                  user?.premium 
+                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                    : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                }`} style={{ cursor: 'pointer' }}>
+                  {!user?.premium && <Lock className="h-4 w-4 mr-2" />}
                   <input
                     type="file"
                     accept=".csv,text/csv"
                     onChange={handleImportBank}
                     className="hidden"
-                    disabled={downloading}
+                    disabled={downloading || !user?.premium}
                   />
                   {t('importCsv')}
                 </label>
                 <button
                   onClick={handleBackup}
                   disabled={downloading}
-                  className="px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg"
+                  className={`px-4 py-3 rounded-lg disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg ${
+                    user?.premium 
+                      ? 'bg-gray-700 text-white hover:bg-gray-800' 
+                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  }`}
                   style={{ cursor: 'pointer' }}
                 >
+                  {!user?.premium && <Lock className="h-4 w-4 mr-2" />}
                   {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/></>) : (<span>{t('backupJSON')}</span>)}
                 </button>
                 <label className="px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg" style={{ cursor: 'pointer' }}>
@@ -710,25 +767,40 @@ export default function ReportsPage() {
                 <button
                   onClick={() => handleDownload('csv')}
                   disabled={downloading}
-                  className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg"
+                  className={`px-4 py-3 rounded-lg disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg ${
+                    user?.premium 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  }`}
                   style={{ cursor: 'pointer' }}
                 >
+                  {!user?.premium && <Lock className="h-4 w-4 mr-2" />}
                   {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/></>) : (<span>{t('exportCSV')}</span>)}
                 </button>
                 <button
                   onClick={() => handleDownload('excel')}
                   disabled={downloading}
-                  className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg"
+                  className={`px-4 py-3 rounded-lg disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg ${
+                    user?.premium 
+                      ? 'bg-green-600 text-white hover:bg-green-700' 
+                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  }`}
                   style={{ cursor: 'pointer' }}
                 >
+                  {!user?.premium && <Lock className="h-4 w-4 mr-2" />}
                   {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/></>) : (<span>{t('exportExcel')}</span>)}
                 </button>
                 <button
                   onClick={() => handleDownload('pdf')}
                   disabled={downloading}
-                  className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg"
+                  className={`px-4 py-3 rounded-lg disabled:opacity-50 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg ${
+                    user?.premium 
+                      ? 'bg-red-600 text-white hover:bg-red-700' 
+                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  }`}
                   style={{ cursor: 'pointer' }}
                 >
+                  {!user?.premium && <Lock className="h-4 w-4 mr-2" />}
                   {downloading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/></>) : (<span>{t('exportPDFButton')}</span>)}
                 </button>
                 <button
