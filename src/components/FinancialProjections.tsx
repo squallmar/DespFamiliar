@@ -87,7 +87,7 @@ function ProjectionCard({ title, amount, change, icon: Icon, color, inverseColor
     : (change >= 0 ? 'text-red-600' : 'text-green-600');
   
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 overflow-visible">
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-full ${color}`}>
           <Icon className="text-white" size={24} />
@@ -96,16 +96,16 @@ function ProjectionCard({ title, amount, change, icon: Icon, color, inverseColor
           {change >= 0 ? '+' : ''}{change.toFixed(1)}%
         </div>
       </div>
-      <div className="flex items-center gap-2 relative group mb-2">
+      <div className="flex items-center gap-2 mb-2">
         <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
         {tooltip && (
-          <>
+          <div className="relative group">
             <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
-            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-[100] shadow-xl whitespace-normal">
               {tooltip}
-              <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
             </div>
-          </>
+          </div>
         )}
       </div>
       <p className="text-2xl font-bold text-gray-900">{formatCurrency(amount)}</p>
@@ -116,22 +116,22 @@ function ProjectionCard({ title, amount, change, icon: Icon, color, inverseColor
 function SavingsRateCard({ title, rate, icon: Icon, color, tooltip }: { title: string; rate: number; icon: React.ComponentType<{ size?: number; className?: string }>; color: string; tooltip?: string }) {
   const progressColor = rate >= 20 ? 'bg-green-500' : rate >= 10 ? 'bg-yellow-500' : 'bg-orange-500';
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 overflow-visible">
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-full ${color}`}>
           <Icon className="text-white" size={24} />
         </div>
       </div>
-      <div className="flex items-center gap-2 relative group mb-2">
+      <div className="flex items-center gap-2 mb-2">
         <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
         {tooltip && (
-          <>
+          <div className="relative group">
             <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
-            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-[100] shadow-xl whitespace-normal">
               {tooltip}
-              <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
             </div>
-          </>
+          </div>
         )}
       </div>
       <div className="mb-3">
@@ -643,7 +643,7 @@ export default function FinancialProjections() {
         </div>
 
         {/* Cards de Projeção */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 mt-8 overflow-visible">
           <ProjectionCard
             title={t.totalIncome || 'Receita Total'}
             amount={totalIncome}
@@ -795,13 +795,15 @@ export default function FinancialProjections() {
           </div>
 
           {/* Metas vs Realidade */}
-          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 relative group">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 overflow-visible">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-lg font-semibold">{t.goalsProgress || 'Progresso das Metas'}</h3>
-              <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
-              <div className="absolute top-6 left-0 mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
-                {t.goalsProgressTooltip || 'Metas financeiras registradas no sistema com acompanhamento de progresso. Os valores são atualizados conforme as economias vão sendo depositadas.'}
-                <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              <div className="relative group">
+                <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-[100] shadow-xl whitespace-normal">
+                  {t.goalsProgressTooltip || 'Metas financeiras registradas no sistema com acompanhamento de progresso. Os valores são atualizados conforme as economias vão sendo depositadas.'}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                </div>
               </div>
             </div>
             <div className="space-y-4">
@@ -841,13 +843,15 @@ export default function FinancialProjections() {
         </div>
 
         {/* Annual Projection Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 mb-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200 mb-8 overflow-visible">
           <div className="flex items-center gap-2 mb-4">
             <h3 className="text-lg font-semibold">{t.annualProjectionTitle || 'Projeção Anual'}</h3>
-            <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
-            <div className="absolute top-6 left-0 mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-50 shadow-lg">
-              {t.annualProjectionTooltip || 'Projeção de quanto você gastará em um ano considerando despesas fixas (contas) e variáveis (alimentação, lazer, etc.).'}
-              <div className="absolute top-full left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+            <div className="relative group">
+              <Info size={16} className="text-gray-400 cursor-help hover:text-blue-500 transition" />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-3 w-64 z-[100] shadow-xl whitespace-normal">
+                {t.annualProjectionTooltip || 'Projeção de quanto você gastará em um ano considerando despesas fixas (contas) e variáveis (alimentação, lazer, etc.).'}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              </div>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-4">{t.annualProjectionSubtitle || 'Impacto anual das despesas mensais'}</p>
