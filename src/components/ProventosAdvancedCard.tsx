@@ -342,7 +342,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
         </div>
         <button
           onClick={() => setShowHistory(!showHistory)}
-          className="px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-sm font-medium text-gray-700"
+          className="px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-sm font-medium text-gray-700 cursor-pointer"
         >
           {showHistory ? (t.hide || 'Ocultar') : (t.show || 'Ver')} {t.history || 'Histórico'}
         </button>
@@ -475,7 +475,7 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
           <h3 className="font-semibold text-gray-800">{t.incomeSources || 'Fontes de Renda'}</h3>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium cursor-pointer"
           >
             <Plus size={16} />
             {t.add || 'Adicionar'}
@@ -602,13 +602,13 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
                   <div className="flex items-center gap-2 ml-3">
                     <button
                       onClick={() => handleEditSource(source)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button
                       onClick={() => handleDeleteSource(source.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                     >
                       <Trash2 size={16} />
                     </button>

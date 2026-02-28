@@ -864,13 +864,13 @@ export default function ReportsPage() {
             <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold">{t('redeemCouponTitle')}</h3>
-                <button onClick={() => setCouponOpen(false)} className="text-gray-500">✕</button>
+                <button onClick={() => setCouponOpen(false)} className="text-gray-500 cursor-pointer">✕</button>
               </div>
               <p className="text-sm text-gray-600 mb-3">{t('redeemCouponDescription')}</p>
               <input type="text" value={couponCode} onChange={e => setCouponCode(e.target.value)} className="w-full border rounded px-3 py-2 mb-4" placeholder={t('couponCodePlaceholder')} />
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setCouponOpen(false)} className="px-4 py-2 bg-gray-200 rounded">{t('cancel')}</button>
-                <button onClick={handleRedeemCoupon} disabled={redeeming} className="px-4 py-2 bg-indigo-600 text-white rounded">{redeeming ? t('redeeming') : t('redeem')}</button>
+                <button onClick={() => setCouponOpen(false)} className="px-4 py-2 bg-gray-200 rounded cursor-pointer">{t('cancel')}</button>
+                <button onClick={handleRedeemCoupon} disabled={redeeming} className="px-4 py-2 bg-indigo-600 text-white rounded cursor-pointer">{redeeming ? t('redeeming') : t('redeem')}</button>
               </div>
             </div>
           </div>

@@ -70,7 +70,7 @@ export default function ResetConfirmForm() {
           required
         />
 
-        <button type="submit" className="w-full bg-blue-600 text-white rounded p-2 font-bold">
+        <button type="submit" className="w-full bg-blue-600 text-white rounded p-2 font-bold cursor-pointer">
           {t.resetPassword || 'Redefinir senha'}
         </button>
       </form>

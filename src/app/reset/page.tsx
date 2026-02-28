@@ -42,7 +42,7 @@ export default function ResetRequestPage() {
           onChange={e => setEmail(e.target.value)}
           required
         />
-        <button type="submit" className="w-full bg-blue-600 text-white rounded p-2 font-bold">{t('sendRecoveryLink', 'Enviar link de recuperação')}</button>
+        <button type="submit" className="w-full bg-blue-600 text-white rounded p-2 font-bold cursor-pointer">{t('sendRecoveryLink', 'Enviar link de recuperação')}</button>
       </form>
       {success && <div className="mt-4 text-green-600">{t('resetEmailSentMsg', 'Se o email existir, um link de redefinição foi enviado.')}</div>}
       {error && <div className="mt-4 text-red-600">{error}</div>}

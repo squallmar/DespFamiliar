@@ -136,7 +136,7 @@ export default function LoginPage() {
                   </button>
                 </div>
                 <div className="mt-2 text-right">
-                  <Link href="/reset" className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                  <Link href="/reset" className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline cursor-pointer">
                     {t('forgotPassword')}
                   </Link>
                 </div>

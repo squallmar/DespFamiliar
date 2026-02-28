@@ -21,7 +21,7 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ open, onClose, onUpgrade })
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
-        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold">×</button>
+        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold cursor-pointer">×</button>
         <h2 className="text-2xl font-bold mb-2 text-center text-indigo-700">{t('premiumTitle')}</h2>
         <p className="mb-4 text-center text-gray-700">{t('premiumDesc')}</p>
         <ul className="mb-4 text-gray-600 text-sm list-disc pl-5">

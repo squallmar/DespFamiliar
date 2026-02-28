@@ -15,45 +15,64 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Parâmetros from e to são obrigatórios (YYYY-MM-DD)' }, { status: 400 });
     }
 
-    const from = new Date(fromParam);
-    const to = new Date(toParam);
+    const from = new Date(`${fromParam}T00:00:00Z`);
+    const to = new Date(`${toParam}T00:00:00Z`);
     if (isNaN(from.getTime()) || isNaN(to.getTime())) {
       return NextResponse.json({ error: 'Formato de data inválido' }, { status: 400 });
     }
 
     // Totais por categoria no período (despesas + contas pagas + despesas recorrentes projetadas)
     const totalsByCategoryResult = await db.query(
-      `SELECT c.id as categoryId, c.name, c.color, c.icon,
-              COALESCE(SUM(e.amount), 0) + COALESCE(SUM(b.amount), 0) + COALESCE(SUM(re.amount), 0) as total
-       FROM categories c
-       LEFT JOIN expenses e
-         ON e.category_id = c.id
-        AND e.user_id = $1
-        AND date(e.date) BETWEEN date($2) AND date($3)
-       LEFT JOIN bills b
-         ON b.category_id = c.id
-        AND b.user_id = $1
-        AND b.status = 'paid'
-        AND b.paid_date IS NOT NULL
-        AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%')
-        AND date(b.paid_date) BETWEEN date($2) AND date($3)
-       LEFT JOIN (
-         SELECT e.category_id, SUM(e.amount) as amount
-         FROM expenses e
-         WHERE e.user_id = $1 AND e.recurring = true
-         AND date(e.date) BETWEEN date($2) - INTERVAL '24 months' AND date($3)
-         AND (
-           e.recurring_type = 'monthly'
-           OR (e.recurring_type = 'daily' AND extract(day FROM date($3) - e.date) >= 1)
-           OR (e.recurring_type = 'weekly' AND extract(day FROM date($3) - e.date) >= 7)
-           OR (e.recurring_type = 'yearly' AND extract(day FROM date($3) - e.date) >= 365)
-         )
-         GROUP BY e.category_id
-       ) re ON re.category_id = c.id
-       WHERE c.user_id = $4
-       GROUP BY c.id, c.name, c.color, c.icon
+      `SELECT categoryId, name, color, icon, SUM(COALESCE(total, 0)) as total FROM (
+         SELECT c.id as categoryId, c.name, c.color, c.icon, COALESCE(SUM(e.amount), 0) as total
+         FROM categories c
+         LEFT JOIN expenses e
+           ON e.category_id = c.id
+          AND e.user_id = $1
+          AND date(e.date) BETWEEN date($2) AND date($3)
+          AND (e.recurring != true OR e.recurring IS NULL)
+         WHERE c.user_id = $4
+         GROUP BY c.id, c.name, c.color, c.icon
+         UNION ALL
+         SELECT c.id as categoryId, c.name, c.color, c.icon, COALESCE(SUM(b.amount), 0) as total
+         FROM categories c
+         LEFT JOIN bills b
+           ON b.category_id = c.id
+          AND b.user_id = $1
+          AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%')
+            AND (
+              (b.status = 'paid' AND b.paid_date IS NOT NULL AND date(b.paid_date) BETWEEN date($2) AND date($3))
+              OR
+              ((b.status IS NULL OR b.status <> 'paid') AND date(b.due_date) BETWEEN date($2) AND date($3))
+            )
+         WHERE c.user_id = $4
+         GROUP BY c.id, c.name, c.color, c.icon
+         UNION ALL
+         SELECT category_id as categoryId, name, color, icon, SUM(amount) as total
+         FROM (
+              SELECT e.category_id, c.name, c.color, c.icon,
+                  e.amount
+           FROM expenses e
+           JOIN categories c ON c.id = e.category_id,
+           LATERAL (
+             SELECT to_char(e.date + INTERVAL '1 month' * generate_series(0, (
+               (EXTRACT(YEAR FROM date($3)) - EXTRACT(YEAR FROM e.date))::INT * 12 +
+               (EXTRACT(MONTH FROM date($3)) - EXTRACT(MONTH FROM e.date))::INT
+             )), 'YYYY-MM') as ym
+           ) months
+           WHERE e.user_id = $1 
+           AND e.recurring = true 
+           AND e.recurring_type = 'monthly'
+           AND e.date <= date($3)
+           AND date(e.date) BETWEEN date($2) - INTERVAL '24 months' AND date($3)
+           AND months.ym >= to_char(date($2), 'YYYY-MM')
+           AND months.ym <= to_char(date($3), 'YYYY-MM')
+         ) recurring_monthly
+         GROUP BY category_id, name, color, icon
+       ) t
+       GROUP BY categoryId, name, color, icon
        ORDER BY total DESC`,
-      [user.userId, from.toISOString(), to.toISOString(), user.userId]
+      [user.userId, fromParam, toParam, user.userId]
     );
     const totalsByCategory = totalsByCategoryResult.rows as Array<{ categoryId: string; name: string; color: string; icon: string; total: number }>; 
 
@@ -62,12 +81,14 @@ export async function GET(request: NextRequest) {
       `SELECT COALESCE(SUM(b.amount), 0) as total
        FROM bills b
        WHERE b.user_id = $1
-         AND b.status = 'paid'
-         AND b.paid_date IS NOT NULL
          AND b.category_id IS NULL
          AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%')
-         AND date(b.paid_date) BETWEEN date($2) AND date($3)`,
-      [user.userId, from.toISOString(), to.toISOString()]
+         AND (
+           (b.status = 'paid' AND b.paid_date IS NOT NULL AND date(b.paid_date) BETWEEN date($2) AND date($3))
+           OR
+           ((b.status IS NULL OR b.status <> 'paid') AND date(b.due_date) BETWEEN date($2) AND date($3))
+         )`,
+      [user.userId, fromParam, toParam]
     );
     const uncategorizedBillsTotal = Number(uncategorizedBillsResult.rows[0]?.total || 0);
     if (uncategorizedBillsTotal > 0) {
@@ -93,10 +114,15 @@ export async function GET(request: NextRequest) {
          FROM bills b
          WHERE b.user_id = $1 AND b.status = 'paid' AND b.paid_date IS NOT NULL AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%') AND date(b.paid_date) BETWEEN date($2) AND date($3)
          GROUP BY date(b.paid_date)
+         UNION ALL
+         SELECT date(b.due_date) as day, COALESCE(SUM(b.amount), 0) as total
+         FROM bills b
+         WHERE b.user_id = $1 AND (b.status IS NULL OR b.status <> 'paid') AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%') AND date(b.due_date) BETWEEN date($2) AND date($3)
+         GROUP BY date(b.due_date)
        ) t
        GROUP BY day
        ORDER BY day ASC`,
-      [user.userId, from.toISOString(), to.toISOString()]
+      [user.userId, fromParam, toParam]
     );
     const dailyTotals = dailyTotalsResult.rows;
 
@@ -113,6 +139,11 @@ export async function GET(request: NextRequest) {
          WHERE b.user_id = $1 AND b.status = 'paid' AND b.paid_date IS NOT NULL AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%') AND date(b.paid_date) BETWEEN date($2) AND date($3)
          GROUP BY to_char(b.paid_date, 'YYYY-MM')
          UNION ALL
+         SELECT to_char(b.due_date, 'YYYY-MM') as ym, COALESCE(SUM(b.amount), 0) as total
+         FROM bills b
+         WHERE b.user_id = $1 AND (b.status IS NULL OR b.status <> 'paid') AND (b.notes IS NULL OR b.notes NOT LIKE 'orig:expense:%') AND date(b.due_date) BETWEEN date($2) AND date($3)
+         GROUP BY to_char(b.due_date, 'YYYY-MM')
+         UNION ALL
          SELECT ym, SUM(amount) as total
          FROM (
            SELECT to_char(e.date + INTERVAL '1 month' * generate_series(0, (
@@ -128,9 +159,22 @@ export async function GET(request: NextRequest) {
        ) t
        GROUP BY ym
        ORDER BY ym ASC`,
-      [user.userId, from.toISOString(), to.toISOString()]
+      [user.userId, fromParam, toParam]
     );
     const monthlyTotals = monthlyTotalsResult.rows;
+
+    if (process.env.NODE_ENV !== 'production') {
+      const totalsSum = totalsByCategory.reduce((sum, item) => sum + Number(item.total || 0), 0);
+      const nonZeroCategories = totalsByCategory.filter((item) => Number(item.total || 0) > 0).length;
+      console.log('[reports-debug]', {
+        userId: user.userId,
+        from: fromParam,
+        to: toParam,
+        totalsSum,
+        nonZeroCategories,
+        monthlyPoints: monthlyTotals.length,
+      });
+    }
 
     return NextResponse.json({ totalsByCategory, dailyTotals, monthlyTotals });
   } catch (error) {

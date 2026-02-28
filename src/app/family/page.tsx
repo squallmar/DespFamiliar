@@ -122,8 +122,11 @@ export default function FamilyMembersPage() {
         <div className="max-w-6xl mx-auto">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-                👨‍👩‍👧‍👦 {t('familyMembersTitle', 'Membros Familiares')}
+              <h1 className="text-5xl font-bold mb-2 flex items-center gap-3">
+                <span className="text-5xl">👨‍👩‍👧‍👦</span>
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  {t('familyMembersTitle', 'Membros Familiares')}
+                </span>
               </h1>
               <p className="text-lg text-gray-600">{t('familyMembersSubtitle', 'Gerencie os membros da sua família e rastreie quem gasta o quê')}</p>
             </div>
@@ -186,7 +189,7 @@ export default function FamilyMembersPage() {
                           key={avatar}
                           type="button"
                           onClick={() => setFormData({ ...formData, avatar })}
-                          className={`text-3xl p-2 rounded-lg ${
+                          className={`text-3xl p-2 rounded-lg cursor-pointer ${
                             formData.avatar === avatar ? 'bg-indigo-100 ring-2 ring-indigo-500' : 'bg-gray-100'
                           } hover:bg-gray-200 transition`}
                         >
@@ -204,7 +207,7 @@ export default function FamilyMembersPage() {
                           key={color}
                           type="button"
                           onClick={() => setFormData({ ...formData, color })}
-                          className={`w-10 h-10 rounded-lg ${
+                          className={`w-10 h-10 rounded-lg cursor-pointer ${
                             formData.color === color ? 'ring-2 ring-offset-2 ring-gray-400' : ''
                           }`}
                           style={{ backgroundColor: color }}
@@ -234,13 +237,13 @@ export default function FamilyMembersPage() {
                       setEditingId(null);
                       setFormData({ name: '', avatar: '👤', color: '#6366F1', relation: '', notes: '' });
                     }}
-                    className="px-6 py-2 border rounded-lg hover:bg-gray-50 font-semibold transition"
+                    className="px-6 py-2 border rounded-lg hover:bg-gray-50 font-semibold transition cursor-pointer"
                   >
                     {t('cancel', 'Cancelar')}
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition"
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition cursor-pointer"
                   >
                     {editingId ? t('updateMember', 'Atualizar') : t('createMember', 'Criar')}
                   </button>
@@ -297,14 +300,14 @@ export default function FamilyMembersPage() {
                   <div className="flex gap-2 pt-4 border-t">
                     <button
                       onClick={() => handleEdit(member)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition cursor-pointer"
                       title={t('editMember', 'Editar')}
                     >
                       <Edit2 className="w-4 h-4" /> {t('editMember', 'Editar')}
                     </button>
                     <button
                       onClick={() => handleDelete(member.id)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-semibold transition"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-semibold transition cursor-pointer"
                       title={t('deleteMember', 'Remover')}
                     >
                       <Trash2 className="w-4 h-4" /> {t('deleteMember', 'Remover')}

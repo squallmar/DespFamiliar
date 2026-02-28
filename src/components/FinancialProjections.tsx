@@ -154,6 +154,10 @@ export default function FinancialProjections() {
   // Time range state must be declared first since it's used in other hooks
   const [timeRange, setTimeRange] = useState('1month');
   
+  // Month/Year selection for viewing historical data
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
 
   const { language, currency } = useLocation();
   const langKey = resolveLanguage(language);
@@ -163,6 +167,7 @@ export default function FinancialProjections() {
 
   // Data state
   const [reports, setReports] = useState<ReportsResponse | null>(null);
+  const [selectedPeriodReport, setSelectedPeriodReport] = useState<ReportsResponse | null>(null);
   const [recent3MonthsReport, setRecent3MonthsReport] = useState<ReportsResponse | null>(null);
   const [previous3MonthsReport, setPrevious3MonthsReport] = useState<ReportsResponse | null>(null);
   const [incomeHistory, setIncomeHistory] = useState<IncomeItem[]>([]);
@@ -180,25 +185,39 @@ export default function FinancialProjections() {
         setError(null);
         const today = new Date();
         const formatYmd = (date: Date) => date.toISOString().slice(0, 10);
+        
+        // Generate date range for selected month
+        const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+        const monthEnd = new Date(selectedYear, selectedMonth, 0); // Last day of selected month
+        const from = formatYmd(monthStart);
+        const to = formatYmd(monthEnd);
+
+        // For recent/previous comparisons, use full 12 months
         const fromDate = new Date(today.getFullYear(), today.getMonth() - 11, 1);
         const toDate = today;
-        const from = formatYmd(fromDate);
-        const to = formatYmd(toDate);
+        const fullFrom = formatYmd(fromDate);
+        const fullTo = formatYmd(toDate);
 
         const recentStart = new Date(today.getFullYear(), today.getMonth() - 2, 1);
         const previousStart = new Date(today.getFullYear(), today.getMonth() - 5, 1);
         const previousEnd = new Date(today.getFullYear(), today.getMonth() - 2, 0);
 
-        const [repRes, statsRes, recentRes, previousRes] = await Promise.all([
+        const [repRes, selectedRes, statsRes, recentRes, previousRes] = await Promise.all([
+          fetch(`/api/reports?from=${fullFrom}&to=${fullTo}`, { credentials: 'include' }),
           fetch(`/api/reports?from=${from}&to=${to}`, { credentials: 'include' }),
-          fetch('/api/stats', { credentials: 'include' }),
-          fetch(`/api/reports?from=${formatYmd(recentStart)}&to=${to}`, { credentials: 'include' }),
+          fetch(`/api/stats?year=${selectedYear}&month=${selectedMonth}`, { credentials: 'include' }),
+          fetch(`/api/reports?from=${formatYmd(recentStart)}&to=${fullTo}`, { credentials: 'include' }),
           fetch(`/api/reports?from=${formatYmd(previousStart)}&to=${formatYmd(previousEnd)}`, { credentials: 'include' }),
         ]);
 
         const repJson = await repRes.json();
         if (!repRes.ok) throw new Error(repJson.error || 'Falha ao carregar relatórios');
         setReports(repJson as ReportsResponse);
+
+        const selectedJson = await selectedRes.json();
+        if (selectedRes.ok) {
+          setSelectedPeriodReport(selectedJson as ReportsResponse);
+        }
 
         const statsJson = await statsRes.json();
         if (!statsRes.ok) throw new Error(statsJson.error || 'Falha ao carregar projeção');
@@ -246,7 +265,7 @@ export default function FinancialProjections() {
       }
     };
     fetchData();
-  }, []);
+  }, [selectedYear, selectedMonth]);
 
   // Build historical series and forecast with income data
   const { chartData, avgLast3, sumProjectedPeriod, incomeByMonth } = useMemo(() => {
@@ -328,31 +347,64 @@ export default function FinancialProjections() {
 
   // Annual projection calculation
   const annualProjection = useMemo(() => {
-    if (!reports || !reports.totalsByCategory) return { recurring: 0, variable: 0, total: 0, byCategory: [] };
+    const selectedHasPositiveData = (selectedPeriodReport?.totalsByCategory ?? []).some(
+      (cat) => Number(cat.total || 0) > 0
+    );
+
+    // Prefer selected period data only when it has positive totals, otherwise use historical reports
+    const sourceReport = selectedHasPositiveData ? selectedPeriodReport : reports;
     
-    // Calculate monthly average for last 3 months
-    const monthlyTotals = reports.monthlyTotals || [];
-    const last3Months = monthlyTotals.slice(-3);
-    const avgMonthly = last3Months.length > 0
-      ? last3Months.reduce((sum, m) => sum + Number(m.total || 0), 0) / last3Months.length
-      : 0;
+    if (!sourceReport || !sourceReport.totalsByCategory || sourceReport.totalsByCategory.length === 0) {
+      return { recurring: 0, variable: 0, total: 0, byCategory: [] };
+    }
     
-    // Calculate annual total (average monthly * 12)
-    const annualTotal = avgMonthly * 12;
+    // If using selected period, use month's data directly annualized
+    // If using historical, calculate monthly average for last 3 months
+    let annualTotal = 0;
+    let categoryBreakdown: any[] = [];
     
-    // Break down by category
-    const categoryBreakdown = reports.totalsByCategory
-      .map(cat => {
-        const monthlyAvg = Number(cat.total || 0) / Math.max(monthlyTotals.length, 1);
-        const yearlyProjection = monthlyAvg * 12;
-        return {
-          name: categoriesMap[cat.name] || cat.name,
-          originalName: cat.name,
-          monthlyAvg,
-          yearlyProjection,
-          color: cat.color
-        };
-      })
+    const hasSelectedPeriodData = selectedHasPositiveData;
+    
+    if (hasSelectedPeriodData) {
+      // Using selected period - categorize the current month's data
+      annualTotal = sourceReport!.totalsByCategory!.reduce((sum, cat) => sum + Number(cat.total || 0), 0);
+      categoryBreakdown = sourceReport!.totalsByCategory!
+        .map(cat => {
+          const monthTotal = Number(cat.total || 0);
+          const yearlyProjection = monthTotal * 12;  // Annualize single month
+          return {
+            name: categoriesMap[cat.name] || cat.name,
+            originalName: cat.name,
+            monthlyAvg: monthTotal,
+            yearlyProjection,
+            color: cat.color
+          };
+        });
+    } else {
+      // Using historical data - average last 3 months
+      const monthlyTotals = reports?.monthlyTotals || [];
+      const last3Months = monthlyTotals.slice(-3);
+      const avgMonthly = last3Months.length > 0
+        ? last3Months.reduce((sum, m) => sum + Number(m.total || 0), 0) / last3Months.length
+        : 0;
+      
+      annualTotal = avgMonthly * 12;
+      
+      categoryBreakdown = sourceReport!.totalsByCategory!
+        .map(cat => {
+          const monthlyAvg = Number(cat.total || 0) / Math.max(monthlyTotals.length, 1);
+          const yearlyProjection = monthlyAvg * 12;
+          return {
+            name: categoriesMap[cat.name] || cat.name,
+            originalName: cat.name,
+            monthlyAvg,
+            yearlyProjection,
+            color: cat.color
+          };
+        });
+    }
+    
+    categoryBreakdown = categoryBreakdown
       .filter(c => c.yearlyProjection > 0)
       .sort((a, b) => b.yearlyProjection - a.yearlyProjection);
     
@@ -372,7 +424,7 @@ export default function FinancialProjections() {
       total: annualTotal,
       byCategory: categoryBreakdown
     };
-  }, [reports, categoriesMap]);
+  }, [reports, selectedPeriodReport, categoriesMap]);
 
   // Cards computations
   const rangeCount = timeRange === '3months' ? 3 : timeRange === '12months' ? 12 : 6;
@@ -556,16 +608,38 @@ export default function FinancialProjections() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">{t.projectionsTitle || 'Projeções Financeiras'}</h1>
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="1month">{t.nextMonth || 'Próximo mês'}</option>
-            <option value="3months">{t.next3 || 'Próximos 3 meses'}</option>
-            <option value="6months">{t.next6 || 'Próximos 6 meses'}</option>
-            <option value="12months">{t.next12 || 'Próximos 12 meses'}</option>
-          </select>
+          <div className="flex gap-3 items-center">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                <option key={month} value={month}>
+                  {new Date(2000, month - 1).toLocaleDateString(language, { month: 'long' })}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="1month">{t.nextMonth || 'Próximo mês'}</option>
+              <option value="3months">{t.next3 || 'Próximos 3 meses'}</option>
+              <option value="6months">{t.next6 || 'Próximos 6 meses'}</option>
+              <option value="12months">{t.next12 || 'Próximos 12 meses'}</option>
+            </select>
+          </div>
         </div>
 
         {/* Cards de Projeção */}

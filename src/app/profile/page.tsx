@@ -190,7 +190,7 @@ function ProfileContent() {
                       key={avatar}
                       type="button"
                       onClick={() => setFormData({ ...formData, avatar })}
-                      className={`text-3xl p-2 rounded-lg transition-all hover:scale-110 ${
+                      className={`text-3xl p-2 rounded-lg transition-all hover:scale-110 cursor-pointer ${
                         formData.avatar === avatar
                           ? 'bg-blue-500 ring-2 ring-blue-600 scale-110 shadow-lg'
                           : 'bg-white hover:bg-blue-50 shadow-sm'
@@ -304,14 +304,14 @@ function ProfileContent() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                 disabled={loading}
               >
                 {t.cancel}
               </button>
               <button
                 type="submit"
-                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 disabled={loading}
               >
                 <Save className="h-5 w-5 mr-2" />

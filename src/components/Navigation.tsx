@@ -104,7 +104,7 @@ export default function Navigation() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`relative inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                    className={`relative inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
                       isActive
                         ? 'bg-white/20 text-white shadow-md'
                         : 'text-blue-100 hover:bg-white/10 hover:text-white'
@@ -176,7 +176,7 @@ export default function Navigation() {
                   <div className="py-1">
                     <Link
                       href="/profile"
-                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors cursor-pointer"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <User className="mr-3 h-4 w-4 text-blue-600" />
@@ -184,7 +184,7 @@ export default function Navigation() {
                     </Link>
                     <Link
                       href="/help"
-                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors cursor-pointer"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <HelpCircle className="mr-3 h-4 w-4 text-blue-600" />
@@ -194,7 +194,7 @@ export default function Navigation() {
                       <div className="border-t border-gray-200 mt-1 pt-1">
                         <Link
                           href="/admin/users"
-                          className="flex items-center px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors"
+                          className="flex items-center px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
                           onClick={() => setUserMenuOpen(false)}
                         >
                           <Settings className="mr-3 h-4 w-4 text-amber-600" />
@@ -202,7 +202,7 @@ export default function Navigation() {
                         </Link>
                         <Link
                           href="/admin/feedbacks"
-                          className="flex items-center px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors"
+                          className="flex items-center px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
                           onClick={() => setUserMenuOpen(false)}
                         >
                           <Settings className="mr-3 h-4 w-4 text-amber-600" />
@@ -213,7 +213,7 @@ export default function Navigation() {
                     <div className="border-t border-gray-200 mt-1 pt-1">
                       <button
                         onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2.5 text-sm text-red-700 hover:bg-red-50 transition-colors"
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
                       >
                         <LogOut className="mr-3 h-4 w-4 text-red-600" />
                         <span>{t.logout}</span>
@@ -252,7 +252,7 @@ export default function Navigation() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center px-3 py-2.5 rounded-md text-base font-medium transition-all ${
+                  className={`flex items-center px-3 py-2.5 rounded-md text-base font-medium transition-all cursor-pointer ${
                     isActive
                       ? 'bg-white/20 text-white'
                       : 'text-blue-100 hover:bg-white/10 hover:text-white'
