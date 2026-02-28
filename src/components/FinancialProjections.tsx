@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Calendar, Target, DollarSign, Wallet, TrendingDown, Info } from 'lucide-react';
+import { TrendingUp, Calendar, Target, DollarSign, Wallet, TrendingDown, Info, RefreshCw } from 'lucide-react';
 
 import { useLocation } from '@/contexts/LocationContext';
 import translations, { resolveLanguage } from '@/lib/translations';
@@ -158,6 +158,7 @@ export default function FinancialProjections() {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const { language, currency } = useLocation();
   const langKey = resolveLanguage(language);
@@ -265,7 +266,7 @@ export default function FinancialProjections() {
       }
     };
     fetchData();
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, refreshTrigger]);
 
   // Build historical series and forecast with income data
   const { chartData, avgLast3, sumProjectedPeriod, incomeByMonth } = useMemo(() => {
@@ -287,7 +288,8 @@ export default function FinancialProjections() {
         ym,
         expenses: y[i],
         income: incomeMap.get(ym) || 0,
-        trend: y[i]
+        trend: y[i],
+        projected: undefined // Historical data doesn't have projections
       };
     });
 
@@ -313,17 +315,16 @@ export default function FinancialProjections() {
         month: ymLabel(ym, language),
         ym,
         projected: val,
-        income: projectedIncome
+        income: projectedIncome,
+        expenses: undefined, // Future data is projected, not actual
+        trend: val
       };
     });
     const futureValues = future.map(f => f.projected as number);
     const periodSum = futureValues.reduce((acc, v) => acc + v, 0);
 
     // Merge: past with expenses/income, future with projected expenses/income
-    const data = [
-      ...hist,
-      ...future.map(f => ({ month: f.month, expenses: f.projected, income: f.income, trend: f.projected }))
-    ];
+    const data = [...hist, ...future];
 
     const last3 = y.slice(-3);
     const avg3 = last3.length ? last3.reduce((acc, v) => acc + v, 0) / last3.length : 0;
@@ -358,6 +359,12 @@ export default function FinancialProjections() {
       return { recurring: 0, variable: 0, total: 0, byCategory: [] };
     }
     
+    console.log('📊 Annual Projection Calculation:', {
+      sourceReport: selectedHasPositiveData ? 'selected period' : 'historical',
+      totalsByCategory: sourceReport.totalsByCategory.length,
+      monthlyTotals: sourceReport.monthlyTotals?.length || 0
+    });
+    
     // If using selected period, use month's data directly annualized
     // If using historical, calculate monthly average for last 3 months
     let annualTotal = 0;
@@ -367,7 +374,7 @@ export default function FinancialProjections() {
     
     if (hasSelectedPeriodData) {
       // Using selected period - categorize the current month's data
-      annualTotal = sourceReport!.totalsByCategory!.reduce((sum, cat) => sum + Number(cat.total || 0), 0);
+      annualTotal = sourceReport!.totalsByCategory!.reduce((sum, cat) => sum + Number(cat.total || 0), 0) * 12;
       categoryBreakdown = sourceReport!.totalsByCategory!
         .map(cat => {
           const monthTotal = Number(cat.total || 0);
@@ -416,7 +423,14 @@ export default function FinancialProjections() {
       .filter(c => recurringCategories.some(rc => c.originalName.toLowerCase().includes(rc)))
       .reduce((sum, c) => sum + c.yearlyProjection, 0);
     
-    const variable = annualTotal - recurring;
+    const variable = Math.max(0, annualTotal - recurring); // Ensure non-negative
+    
+    console.log('💰 Annual Totals:', {
+      total: annualTotal,
+      recurring,
+      variable,
+      categoriesCount: categoryBreakdown.length
+    });
     
     return {
       recurring,
@@ -639,6 +653,14 @@ export default function FinancialProjections() {
               <option value="6months">{t.next6 || 'Próximos 6 meses'}</option>
               <option value="12months">{t.next12 || 'Próximos 12 meses'}</option>
             </select>
+            <button
+              onClick={() => setRefreshTrigger(prev => prev + 1)}
+              disabled={loading}
+              className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={t.refreshData || 'Atualizar dados'}
+            >
+              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            </button>
           </div>
         </div>
 
@@ -693,12 +715,34 @@ export default function FinancialProjections() {
           {/* Histórico vs Projeção com Receita */}
           <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-100 hover:border-blue-200">
             <h3 className="text-lg font-semibold mb-4">{t.incomeVsExpenses || 'Receita vs Despesa'}</h3>
+            {chartData.length < 3 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-blue-800">
+                  💡 {t.addMoreDataForBetterCharts || 'Adicione mais despesas em diferentes meses para visualizar melhor as tendências'}
+                </p>
+              </div>
+            )}
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData} margin={{ left: 16 }}>
+              <LineChart data={chartData} margin={{ left: 16, right: 16, top: 10, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
+                <XAxis 
+                  dataKey="month" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  interval={0}
+                />
                 <YAxis width={96} tickFormatter={(v) => formatCurrency(Number(v))} />
-                <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} />
+                <Tooltip 
+                  formatter={(value, name) => {
+                    const displayName = name === 'income' ? (t.chartIncome || 'Receita') 
+                      : name === 'expenses' ? (t.chartExpenses || 'Despesas')
+                      : name === 'projected' ? (t.chartProjected || 'Projetado')
+                      : (t.chartTrend || 'Tendência');
+                    return [formatCurrency(Number(value)), displayName];
+                  }}
+                  labelFormatter={(label) => `${label}`}
+                />
                 <Legend />
                 <Line 
                   type="monotone" 
@@ -706,6 +750,8 @@ export default function FinancialProjections() {
                   stroke="#10b981" 
                   strokeWidth={2}
                   name={t.chartIncome || 'Receita'}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
                 />
                 <Line 
                   type="monotone" 
@@ -713,6 +759,17 @@ export default function FinancialProjections() {
                   stroke="#ef4444" 
                   strokeWidth={2}
                   name={t.chartExpenses || 'Despesas'}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="projected" 
+                  stroke="#f59e0b" 
+                  strokeWidth={2}
+                  name={t.chartProjected || 'Projetado'}
+                  strokeDasharray="5 5"
+                  dot={{ r: 3 }}
                 />
                 <Line 
                   type="monotone" 
@@ -720,7 +777,8 @@ export default function FinancialProjections() {
                   stroke="#8884d8" 
                   strokeWidth={1}
                   name={t.chartTrend || 'Tendência'}
-                  strokeDasharray="5 5"
+                  strokeDasharray="3 3"
+                  dot={false}
                 />
               </LineChart>
             </ResponsiveContainer>
