@@ -117,6 +117,8 @@ export async function GET(request: NextRequest) {
       [user.userId]
     );
 
+    console.log('📊 Bill Alerts Query Result:', billAlertsResult.rows.length > 0 ? billAlertsResult.rows[0] : 'No bills found');
+
     const billAlerts = billAlertsResult.rows.map((bill: BillRow) => {
       const dueDate = new Date(bill.due_date);
       const isOverdue = dueDate < now;
@@ -130,7 +132,7 @@ export async function GET(request: NextRequest) {
         billId: bill.id,
         description: bill.description,
         amount: bill.amount,
-        dueDate: bill.due_date,
+        dueDate: bill.due_date || new Date().toISOString(), // Fallback para data atual se não houver
         categoryName: bill.category_name,
         color: bill.color,
         icon: bill.icon,

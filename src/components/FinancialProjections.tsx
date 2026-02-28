@@ -742,6 +742,7 @@ export default function FinancialProjections() {
                     return [formatCurrency(Number(value)), displayName];
                   }}
                   labelFormatter={(label) => `${label}`}
+                  cursor={false}
                 />
                 <Legend />
                 <Line 
@@ -751,7 +752,7 @@ export default function FinancialProjections() {
                   strokeWidth={2}
                   name={t.chartIncome || 'Receita'}
                   dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+                  activeDot={false}
                 />
                 <Line 
                   type="monotone" 
@@ -760,7 +761,7 @@ export default function FinancialProjections() {
                   strokeWidth={2}
                   name={t.chartExpenses || 'Despesas'}
                   dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+                  activeDot={false}
                 />
                 <Line 
                   type="monotone" 
@@ -800,12 +801,13 @@ export default function FinancialProjections() {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  activeShape={false}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} />
+                <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} cursor={false} />
               </PieChart>
             </ResponsiveContainer>
           </div>

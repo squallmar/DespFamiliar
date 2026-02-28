@@ -462,8 +462,8 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis tickFormatter={(v) => formatCurrency(v)} />
-              <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Proventos']} />
-              <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} />
+              <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Proventos']} cursor={false} />
+              <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} activeDot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -629,8 +629,8 @@ export default function ProventosAdvancedCard({ period, totalExpenses, onTotalCh
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis tickFormatter={(v) => formatCurrency(v)} />
-              <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Valor']} />
-              <Bar dataKey="value" fill="#10b981" maxBarSize={80} />
+              <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Valor']} cursor={false} />
+              <Bar dataKey="value" fill="#10b981" maxBarSize={80} activeBar={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>

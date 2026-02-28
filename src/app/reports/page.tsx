@@ -187,10 +187,10 @@ export default function ReportsPage() {
         const params = new URLSearchParams({ period: summaryPeriod });
         const res = await fetch(`/api/reports/summary?${params.toString()}`, { credentials: 'include' });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error || t('summaryLoadFailed'));
+        if (!res.ok) throw new Error(json.error || 'Failed to load summary');
         setSummary(json);
-      } catch (e) {
-        setSummaryError(e instanceof Error ? e.message : t('genericError'));
+      } catch (error) {
+        setSummaryError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
         setSummaryLoading(false);
       }
@@ -208,8 +208,12 @@ export default function ReportsPage() {
 
   // Proventos (renda) local state (saved to localStorage per-user+month)
   const getCurrentMonthKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
+  // Proventos gerenciados via API e hook customizado
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [proventosMonth, setProventosMonth] = useState<string>(() => getCurrentMonthKey(new Date()));
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [proventosInput, setProventosInput] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [proventosValue, setProventosValue] = useState<number>(0);
   const [proventosSource, setProventosSource] = useState<string>(t('incomeSalary', 'Salário'));
   const [proventosNotes, setProventosNotes] = useState<string>('');
@@ -299,6 +303,7 @@ export default function ReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proventosMonth, user]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const saveProventos = (value: number, monthKey = proventosMonth) => {
     try {
       if (user && user.id) {
@@ -319,8 +324,8 @@ export default function ReportsPage() {
             setProventosValue(value);
             setProventosInput(String(value));
             alert(t('incomeSaved'));
-          } catch (e) {
-            alert(e instanceof Error ? e.message : t('incomeSaveErrorServer'));
+          } catch (error) {
+            alert(error instanceof Error ? error.message : t('incomeSaveErrorServer'));
           }
         })();
         return;
@@ -333,11 +338,13 @@ export default function ReportsPage() {
       setProventosValue(value);
       setProventosInput(String(value));
       alert(t('incomeSaved'));
-    } catch (e) {
+    } catch (error) {
+      console.error('Income save error:', error);
       alert(t('incomeSaveError'));
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearProventos = (monthKey = proventosMonth) => {
     try {
       if (user && user.id) {
@@ -357,7 +364,8 @@ export default function ReportsPage() {
             setProventosValue(0);
             setProventosInput('');
             alert(t('incomeRemoved'));
-          } catch {
+          } catch (error) {
+            console.error('Error clearing proventos:', error);
             alert(t('incomeRemoveError'));
           }
         })();
@@ -375,6 +383,7 @@ export default function ReportsPage() {
   };
 
   // Fetch history for last 6 months for sparkline
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [incomeHistory, setIncomeHistory] = useState<{ month: string; total: number }[]>([]);
   useEffect(() => {
     if (!user || !user.id) return;
@@ -384,30 +393,37 @@ export default function ReportsPage() {
         const json = await res.json();
         if (res.ok && json.history) {
           // history comes ordered desc; take last 6 and reverse for chart
-          const rows = json.history.map((r: any) => ({ month: r.month, total: Number(r.total) }));
+          const rows = json.history.map((r: { month: string; total: number }) => ({ month: r.month, total: Number(r.total) }));
           const last6 = rows.slice(0, 12).reverse();
           setIncomeHistory(last6);
         }
-      } catch (e) {
-        // ignore
+      } catch (error) {
+        console.warn('Failed to load income history:', error);
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   // Helper para formatar moeda
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
   };
   // Helper para formatar data
-  const formatDate = (date: string | Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    };
-    // Garantir que o language seja válido, senão usar en-US como fallback
-    const locale = language && language.length > 0 ? language : 'en-US';
-    return new Date(date).toLocaleDateString(locale, options);
+  const formatDate = (date: string | Date | undefined | null) => {
+    try {
+      if (!date) return '?';
+      const dateObj = new Date(date);
+      // Verificar se é uma data válida
+      if (isNaN(dateObj.getTime())) return '?';
+      const options: Intl.DateTimeFormatOptions = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      };
+      const locale = language && language.length > 0 ? language : 'en-US';
+      return dateObj.toLocaleDateString(locale, options);
+    } catch (e) {
+      console.error('Error formatting date:', date, e);
+      return '?';
+    }
   };
   
   // Helper para obter placeholder de data baseado no idioma
@@ -490,11 +506,11 @@ export default function ReportsPage() {
         const res = await fetch(`/api/reports?${params.toString()}`, { credentials: 'include' });
         const json = await res.json();
         if (!res.ok) {
-          throw new Error(json.error || t('reportsLoadFailed'));
+          throw new Error(json.error || 'Failed to load reports');
         }
         setData(json);
       } catch (e) {
-        setError(e instanceof Error ? e.message : t('genericError'));
+        setError(e instanceof Error ? e.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
@@ -594,10 +610,15 @@ export default function ReportsPage() {
                                 {alert.type === 'spike' && alert.message}
 
                                 {/* 🟡 Alertas de contas (bill) */}
-                                {alert.type === 'bill' &&
-                                  `${alert.description} — ${formatCurrency(alert.amount)}
-                                  — ${t('due')}: ${formatDate(alert.dueDate)}`
-                                }
+                                {alert.type === 'bill' && (
+                                  <>
+                                    <span>{alert.description}</span>
+                                    {' — '}
+                                    <span>{formatCurrency(alert.amount)}</span>
+                                    {' — '}
+                                    <span>{formatDate(alert.dueDate)}</span>
+                                  </>
+                                )}
                               </span>
                             </li>
                           ));
@@ -750,12 +771,13 @@ export default function ReportsPage() {
                             cy="50%"
                             outerRadius={100}
                             labelLine
+                            activeShape={false}
                           >
                             {pieData.map((entry, idx) => (
                               <Cell key={`${entry.categoryId || entry.name}-${idx}`} fill={entry.color} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
+                          <Tooltip formatter={(value: number) => formatCurrency(Number(value))} cursor={false} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -801,8 +823,9 @@ export default function ReportsPage() {
                               backgroundColor: '#ffffff',
                               border: '1px solid #cccccc'
                             }}
+                            cursor={false}
                           />
-                          <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} dot={false} activeDot={false} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
@@ -840,13 +863,14 @@ export default function ReportsPage() {
                               backgroundColor: '#ffffff',
                               border: '1px solid #cccccc'
                             }}
+                            cursor={false}
                           />
                           <Bar 
                             dataKey="total" 
                             fill="#ef4444"
-                            isAnimationActive={true}
-                            animationDuration={600}
+                            isAnimationActive={false}
                             barSize={40}
+                            cursor="default"
                           />
                         </BarChart>
                       </ResponsiveContainer>

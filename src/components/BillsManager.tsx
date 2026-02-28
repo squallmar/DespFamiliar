@@ -550,11 +550,11 @@ export default function BillsManager({
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis width={96} tickFormatter={(v) => formatCurrency(Number(v))} />
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} />
+                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} cursor={false} />
                   <Legend />
-                  <Bar dataKey="pending" fill="#84cc16" name="Pendentes" />
-                  <Bar dataKey="paid" fill="#22c55e" name="Pagas" />
-                  <Bar dataKey="overdue" fill="#ef4444" name="Vencidas" />
+                  <Bar dataKey="pending" fill="#84cc16" name="Pendentes" activeBar={false} />
+                  <Bar dataKey="paid" fill="#22c55e" name="Pagas" activeBar={false} />
+                  <Bar dataKey="overdue" fill="#ef4444" name="Vencidas" activeBar={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -577,12 +577,13 @@ export default function BillsManager({
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="total"
+                    activeShape={false}
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} />
+                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), '']} cursor={false} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
