@@ -110,7 +110,7 @@ export default function AdminFeedbacksPage() {
               onChange={(e) => setPageFilter(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
-              <option value="all">{t.all || 'Todas as páginas'}</option>
+              <option value="all">{'all' in t ? t.all : 'Todas as páginas'}</option>
               {pageOptions.map((page) => (
                 <option key={page} value={page}>{pageMap[page] || page}</option>
               ))}
