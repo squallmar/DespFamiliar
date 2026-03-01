@@ -3,18 +3,26 @@ import Stripe from 'stripe';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 
-// Garante erro claro se variável faltar
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("❌ STRIPE_SECRET_KEY não configurada no ambiente!");
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-11-17.clover',
+  });
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
- apiVersion: '2025-11-17.clover',
-
-});
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'STRIPE_SECRET_KEY não configurada no ambiente' },
+        { status: 500 }
+      );
+    }
+
     const user = requireAuth(request);
 
     const db = await getDatabase();

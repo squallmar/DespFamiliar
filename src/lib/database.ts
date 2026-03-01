@@ -244,6 +244,22 @@ export async function getDatabase() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pix_payments (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        asaas_subscription_id TEXT UNIQUE,
+        asaas_customer_id TEXT,
+        amount DECIMAL(10, 2) NOT NULL DEFAULT 20.00,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        next_due_date TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        confirmed_at TIMESTAMP,
+        cancelled_at TIMESTAMP,
+        notes TEXT
+      )
+    `);
+
     // =========================
     // ÍNDICES
     // =========================
@@ -260,14 +276,30 @@ export async function getDatabase() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_bills_paid_by ON bills (paid_by)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_incomes_user_month ON incomes (user_id, month)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_family_members_user ON family_members (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_pix_payments_user ON pix_payments (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_pix_payments_status ON pix_payments (status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_pix_payments_asaas ON pix_payments (asaas_subscription_id)');
 
     // =========================
     // ADMIN DEV
     // =========================
     try {
-      const adminEmail = process.env.DEV_ADMIN_EMAIL || 'squallmar@gmail.com';
-      const adminPassword = process.env.DEV_ADMIN_PASSWORD || 'mM2038@';
+      const allowDevAdminBootstrap =
+        process.env.NODE_ENV === 'development' &&
+        process.env.ENABLE_DEV_ADMIN_BOOTSTRAP === 'true';
+
+      if (!allowDevAdminBootstrap) {
+        return pool;
+      }
+
+      const adminEmail = process.env.DEV_ADMIN_EMAIL;
+      const adminPassword = process.env.DEV_ADMIN_PASSWORD;
       const adminName = 'Admin';
+
+      if (!adminEmail || !adminPassword || adminPassword.length < 12) {
+        console.warn('Dev admin bootstrap ignorado: configure DEV_ADMIN_EMAIL e DEV_ADMIN_PASSWORD forte (>=12).');
+        return pool;
+      }
 
       const res = await pool.query(
         'SELECT id FROM users WHERE email = $1',

@@ -147,7 +147,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading || !formData.email || !formData.password}
-                className="flex w-full justify-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 py-3 px-4 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+                className="flex w-full justify-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 py-3 px-4 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
               >
                 {loading ? (
                   <>
@@ -174,7 +174,7 @@ export default function LoginPage() {
             <div className="mt-6">
               <Link
                 href="/register"
-                className="flex w-full justify-center rounded-lg border-2 border-gray-300 bg-white py-3 px-4 text-base font-semibold text-gray-700 shadow-md hover:shadow-lg hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200"
+                className="flex w-full justify-center rounded-lg border-2 border-gray-300 bg-white py-3 px-4 text-base font-semibold text-gray-700 shadow-md hover:shadow-lg hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer transition duration-200"
               >
                 {t('createAccount')}
               </Link>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Check, X, Clock, CheckCircle } from 'lucide-react';
+import AdminNav from '@/components/AdminNav';
 
 type PixPayment = {
   id: number;
@@ -100,7 +101,22 @@ export default function AdminPixPaymentsPage() {
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-6">Pagamentos Pix - Admin</h1>
+        <AdminNav />
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-4xl font-bold">Pagamentos Premium - Admin</h1>
+          <button
+            onClick={() => router.push('/admin/users')}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition cursor-pointer"
+          >
+            Voltar para Usuários
+          </button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+            Assinaturas mensais Asaas
+          </span>
+        </div>
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-4 mb-6 flex gap-3">
@@ -110,7 +126,7 @@ export default function AdminPixPaymentsPage() {
               filter === 'all'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            } cursor-pointer`}
           >
             Todos
           </button>
@@ -120,7 +136,7 @@ export default function AdminPixPaymentsPage() {
               filter === 'pending'
                 ? 'bg-yellow-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            } cursor-pointer`}
           >
             Pendentes ({payments.filter(p => p.status === 'PENDING').length})
           </button>
@@ -130,7 +146,7 @@ export default function AdminPixPaymentsPage() {
               filter === 'confirmed'
                 ? 'bg-green-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+            } cursor-pointer`}
           >
             Confirmados
           </button>
@@ -179,7 +195,7 @@ export default function AdminPixPaymentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
-                      R$ {payment.amount.toFixed(2)}
+                      {`R$ ${Number(payment.amount).toFixed(2)}`}
                     </td>
                     <td className="px-6 py-4">
                       {payment.status === 'PENDING' && (
@@ -208,15 +224,15 @@ export default function AdminPixPaymentsPage() {
                       {payment.status === 'PENDING' && (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleApprove(payment.id, payment.user_id)}
-                            className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                            onClick={() => handleApprove(Number(payment.id), payment.user_id)}
+                            className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition cursor-pointer"
                             title="Aprovar"
                           >
                             <Check size={18} />
                           </button>
                           <button
-                            onClick={() => handleReject(payment.id)}
-                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                            onClick={() => handleReject(Number(payment.id))}
+                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition cursor-pointer"
                             title="Rejeitar"
                           >
                             <X size={18} />

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from '@/contexts/LocationContext';
 import translations, { resolveLanguage } from '@/lib/translations';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import PaywallModal from '@/components/PaywallModal';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 // Lista de avatares predefinidos - sem tons de pele para evitar problemas
@@ -50,6 +51,7 @@ function ProfileContent() {
   const t = translations[langKey] || translations['pt-BR'];
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
   const [formData, setFormData] = useState({
@@ -138,6 +140,29 @@ function ProfileContent() {
   setMessage({ type: 'error', text: error instanceof Error ? error.message : t.error });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpgrade = async () => {
+    const stripePaymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK;
+    try {
+      const response = await fetch('/api/premium/checkout', { method: 'POST' });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      if (stripePaymentLink) {
+        window.location.href = stripePaymentLink;
+      } else {
+        alert(data.error || t.checkoutError || t.error);
+      }
+    } catch {
+      if (stripePaymentLink) {
+        window.location.href = stripePaymentLink;
+      } else {
+        alert(t.checkoutError || t.error);
+      }
     }
   };
 
@@ -337,9 +362,21 @@ function ProfileContent() {
                 </p>
               )}
             </div>
+            {!user.premium && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setPaywallOpen(true)}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition cursor-pointer"
+                >
+                  {t.premiumTitle}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+      <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} onUpgrade={handleUpgrade} />
     </div>
   );
 }

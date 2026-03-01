@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import translations, { resolveLanguage } from '@/lib/translations';
 import { useLocation } from '@/contexts/LocationContext';
 import { Trash2, X, Check, Database } from 'lucide-react';
+import Link from 'next/link';
+import AdminNav from '@/components/AdminNav';
 
 
 interface User {
@@ -114,6 +116,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      <AdminNav />
       {/* Botão de formatar banco (admin) */}
       {user?.admin && (
         <div className="mb-8 flex items-center gap-4">
@@ -129,6 +132,13 @@ export default function AdminUsersPage() {
           {formatResult && (
             <span className={formatResult.startsWith(t.formatSuccess?.split(':')[0] || 'Sucesso') ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}>{formatResult}</span>
           )}
+          <Link
+            href="/admin/pix-payments"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 font-bold border border-indigo-800 transition-colors cursor-pointer"
+            title="Gerenciar pagamentos de assinaturas"
+          >
+            {t.premium || 'Premium'} {t.actions || 'Ações'}
+          </Link>
         </div>
       )}
       {/* Modal de confirmação de formatação do banco */}
@@ -304,7 +314,7 @@ export default function AdminUsersPage() {
             } finally {
               setCreatingCoupon(false);
             }
-          }} disabled={creatingCoupon} className="px-4 py-2 bg-indigo-600 text-white rounded">{creatingCoupon ? (t.creating || 'Criando...') : (t.createCoupon || 'Criar Cupom')}</button>
+          }} disabled={creatingCoupon} className="px-4 py-2 bg-indigo-600 text-white rounded cursor-pointer">{creatingCoupon ? (t.creating || 'Criando...') : (t.createCoupon || 'Criar Cupom')}</button>
         </div>
 
         {loadingCoupons ? (<div>{t.loadingCoupons || 'Carregando cupons...'}</div>) : (
@@ -339,7 +349,7 @@ export default function AdminUsersPage() {
                             loadCoupons();
                           } else alert(json.error || (t.error || 'Erro'));
                         } catch (e) { alert(t.error || 'Erro'); }
-                      }} className="px-3 py-1 bg-red-600 text-white rounded">{t.revoke || 'Revogar'}</button>
+                      }} className="px-3 py-1 bg-red-600 text-white rounded cursor-pointer">{t.revoke || 'Revogar'}</button>
                     </td>
                   </tr>
                 ))}

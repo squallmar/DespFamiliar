@@ -51,6 +51,11 @@ export default function ReportsPage() {
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
+  const [isClientReady, setIsClientReady] = useState(false);
+
+  useEffect(() => {
+    setIsClientReady(true);
+  }, []);
 
   // Função para abrir paywall se não for premium
   const requirePremium = (action: () => void) => {
@@ -63,12 +68,27 @@ export default function ReportsPage() {
 
   // Upgrade Stripe
   const handleUpgrade = async () => {
-    const res = await fetch('/api/premium/checkout', { method: 'POST' });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert(data.error || t('checkoutError'));
+    const stripePaymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK;
+    try {
+      const res = await fetch('/api/premium/checkout', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      // Fallback to payment link if API returns no URL
+      if (stripePaymentLink) {
+        window.location.href = stripePaymentLink;
+      } else {
+        alert(data.error || t('checkoutError'));
+      }
+    } catch (error) {
+      // Fallback to payment link on API error
+      if (stripePaymentLink) {
+        window.location.href = stripePaymentLink;
+      } else {
+        alert(t('checkoutError'));
+      }
     }
   };
 
@@ -97,11 +117,6 @@ export default function ReportsPage() {
     } finally {
       setRedeeming(false);
     }
-  };
-
-  // Pix manual
-  const handlePix = () => {
-    window.open('https://api.whatsapp.com/send?phone=5522998550450&text=Quero%20assinar%20o%20premium%20por%20R$20%20via%20Pix', '_blank');
   };
   // Função para importar extrato bancário
   const handleImportBank = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -523,7 +538,7 @@ export default function ReportsPage() {
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>{t('loadingLocation')}</span>
+          <span>{isClientReady ? t('loadingLocation') : 'Loading location...'}</span>
         </div>
       </div>
     );
@@ -809,13 +824,6 @@ export default function ReportsPage() {
                   style={{ cursor: 'pointer' }}
                 >
                   {t('useCoupon')}
-                </button>
-                <button
-                  onClick={handlePix}
-                  className="px-4 py-3 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-600 flex items-center justify-center cursor-pointer font-semibold transition shadow-md hover:shadow-lg"
-                  style={{ cursor: 'pointer' }}
-                >
-                  {t('subscribePixButton')}
                 </button>
               </div>
             </div>

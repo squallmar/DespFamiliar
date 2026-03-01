@@ -1,25 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { getDatabase } from '@/lib/database';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
-interface JWTPayload {
-  userId: string;
-  name: string;
-  email: string;
-}
+import { requireAuth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Token não encontrado' }, { status: 401 });
-    }
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = requireAuth(request);
     const db = await getDatabase();
-  const userResult = await db.query('SELECT premium, admin, avatar FROM users WHERE id = $1', [decoded.userId]);
-  const userDb = userResult.rows[0];
+    const userResult = await db.query('SELECT premium, admin, avatar FROM users WHERE id = $1', [decoded.userId]);
+    const userDb = userResult.rows[0];
     // Return user data
     return NextResponse.json({
       user: {
@@ -32,7 +20,12 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Erro na verificação do token:', error);
+    if (error instanceof Error && error.message.includes('JWT_SECRET')) {
+      return NextResponse.json(
+        { error: 'Servidor não configurado: JWT_SECRET ausente ou inválido no ambiente.' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
 }

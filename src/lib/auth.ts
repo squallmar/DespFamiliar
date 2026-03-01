@@ -1,26 +1,61 @@
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const AUTH_COOKIE_NAME = 'token';
+let cachedJwtSecret: string | null = null;
 
-interface JWTPayload {
+export interface JWTPayload {
   userId: string;
   name: string;
   email: string;
 }
 
+function getJwtSecret(): string {
+  if (cachedJwtSecret) {
+    return cachedJwtSecret;
+  }
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim().length < 32) {
+    throw new Error('JWT_SECRET ausente ou fraco (mínimo 32 caracteres).');
+  }
+
+  cachedJwtSecret = secret;
+  return secret;
+}
+
+export function signAuthToken(payload: JWTPayload): string {
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: '7d' });
+}
+
+export function getAuthCookieOptions() {
+  return {
+    httpOnly: true as const,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  };
+}
+
+export function clearAuthCookieOptions() {
+  return {
+    ...getAuthCookieOptions(),
+    maxAge: 0,
+  };
+}
+
 export function getAuthUser(request: NextRequest): JWTPayload | null {
   try {
-    const token = request.cookies.get('token')?.value;
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     
     if (!token) {
       return null;
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JWTPayload;
     return decoded;
-  } catch (error) {
-    console.error('Erro na verificação do token:', error);
+  } catch {
     return null;
   }
 }

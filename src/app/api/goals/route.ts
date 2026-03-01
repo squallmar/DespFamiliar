@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
-import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    let decoded: { userId: string };
-    try {
-      decoded = jwt.verify(token, secret) as { userId: string };
-    } catch (e) {
-      console.error('Token verification failed:', e);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-    const userId = decoded.userId;
+    const user = requireAuth(req);
+    const userId = user.userId;
 
     try {
       const pool = await getDatabase();
@@ -54,22 +39,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    let decoded: { userId: string };
-    try {
-      decoded = jwt.verify(token, secret) as { userId: string };
-    } catch (e) {
-      console.error('Token verification failed:', e);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-    const userId = decoded.userId;
+    const user = requireAuth(req);
+    const userId = user.userId;
 
     const { name, target_amount, deadline } = await req.json();
 
@@ -102,22 +73,8 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    let decoded: { userId: string };
-    try {
-      decoded = jwt.verify(token, secret) as { userId: string };
-    } catch (e) {
-      console.error('Token verification failed:', e);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-    const userId = decoded.userId;
+    const user = requireAuth(req);
+    const userId = user.userId;
 
     const { id, current_amount, completed } = await req.json();
 
@@ -172,22 +129,8 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    let decoded: { userId: string };
-    try {
-      decoded = jwt.verify(token, secret) as { userId: string };
-    } catch (e) {
-      console.error('Token verification failed:', e);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-    const userId = decoded.userId;
+    const user = requireAuth(req);
+    const userId = user.userId;
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

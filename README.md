@@ -49,6 +49,10 @@ Uma aplicação moderna e completa para controle de despesas familiares com func
 - **Rotas Protegidas**: Middleware para páginas privadas
 - **Hash de Senhas**: bcrypt para segurança de credenciais
 - **Reset de Senha**: Sistema completo de recuperação (com email opcional)
+- **Rate Limit**: Limite de tentativas em login, cadastro e reset
+- **Proteção CSRF**: Validação de origem em mutações de API
+- **Webhooks Assinados**: Stripe e Asaas com validação de assinatura/token
+- **Headers de Segurança**: CSP, HSTS, X-Frame-Options e outros headers hardening
 
 ## 🛠️ Tecnologias
 
@@ -82,7 +86,8 @@ npm install
 3. **Configure as variáveis de ambiente**:
 ```bash
 cp .env.example .env
-# Edite o arquivo .env e configure SESSION_SECRET
+# Edite o arquivo .env e configure JWT_SECRET, DATABASE_URL,
+# ASAAS_API_KEY, ASAAS_WEBHOOK_TOKEN e chaves do Stripe
 ```
 
 4. **Inicialize o banco de dados**:

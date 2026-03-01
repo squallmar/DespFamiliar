@@ -2,24 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getDatabase } from '@/lib/database';
 
-// Garante que a variável existe
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("❌ STRIPE_SECRET_KEY não configurada no ambiente");
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-11-17.clover'
+  });
 }
-
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
-  throw new Error("❌ STRIPE_WEBHOOK_SECRET não configurada no ambiente");
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-11-17.clover'
-
-});
 
 // Stripe webhook endpoint
 export async function POST(request: NextRequest) {
+  const stripe = getStripeClient();
+  if (!stripe) {
+    return NextResponse.json({ error: 'STRIPE_SECRET_KEY não configurada no ambiente' }, { status: 500 });
+  }
+
   const sig = request.headers.get("stripe-signature") || "";
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return NextResponse.json({ error: 'STRIPE_WEBHOOK_SECRET não configurada no ambiente' }, { status: 500 });
+  }
 
   let event;
 

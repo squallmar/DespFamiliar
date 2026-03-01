@@ -131,7 +131,7 @@ export default function Navigation() {
             {/* Seletores idioma/moeda */}
             <div className="hidden md:flex items-center space-x-2">
               <select
-                className="bg-white/10 text-white border border-white/20 rounded-lg px-3 py-1.5 text-sm backdrop-blur-sm hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="bg-white/10 text-white border border-white/20 rounded-lg px-3 py-1.5 text-sm backdrop-blur-sm hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
                 value={language}
                 onChange={e => setLanguage && setLanguage(e.target.value)}
                 disabled={loading}
@@ -142,7 +142,7 @@ export default function Navigation() {
                 <option value="es-ES" className="bg-blue-600">🇪🇸 ES</option>
               </select>
               <select
-                className="bg-white/10 text-white border border-white/20 rounded-lg px-3 py-1.5 text-sm backdrop-blur-sm hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="bg-white/10 text-white border border-white/20 rounded-lg px-3 py-1.5 text-sm backdrop-blur-sm hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
                 value={currency}
                 onChange={e => setCurrency && setCurrency(e.target.value)}
                 disabled={loading}
@@ -158,7 +158,7 @@ export default function Navigation() {
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-lg transition-all backdrop-blur-sm"
+                className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-lg transition-all backdrop-blur-sm cursor-pointer"
               >
                 <span className="text-xl">{user.avatar || '👤'}</span>
                 <span className="hidden md:block text-white text-sm font-medium">

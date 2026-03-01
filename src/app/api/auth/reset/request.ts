@@ -1,13 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { sendResetEmail } from '@/lib/mailer';
+import crypto from 'crypto';
+import { checkRateLimit, getClientIpFromRequest } from '@/lib/rate-limit';
 
 // POST /api/auth/reset/request { email }
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+    const ip = getClientIpFromRequest(request);
+    const limitCheck = checkRateLimit(`auth:reset-request:${ip}`, 5, 15 * 60 * 1000);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: 'Muitas solicitações. Tente novamente mais tarde.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(limitCheck.retryAfterSeconds),
+          },
+        }
+      );
+    }
 
-    if (!email) {
+    const { email } = await request.json();
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail) {
       return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 });
     }
 
@@ -16,7 +33,7 @@ export async function POST(request: NextRequest) {
     // PostgreSQL usa db.query()
     const userResult = await db.query(
       'SELECT id FROM users WHERE email = $1',
-      [email]
+      [normalizedEmail]
     );
 
     const user = userResult.rows[0];
@@ -26,8 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    const token =
-      Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const token = crypto.randomBytes(32).toString('hex');
 
     const expires = new Date(Date.now() + 1000 * 60 * 30); // 30 min — formato correto para Postgres
 
@@ -37,7 +53,7 @@ export async function POST(request: NextRequest) {
       [user.id, token, expires]
     );
 
-    await sendResetEmail(email, token);
+    await sendResetEmail(normalizedEmail, token);
 
     return NextResponse.json({ ok: true });
 
