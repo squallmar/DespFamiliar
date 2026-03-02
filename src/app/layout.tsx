@@ -6,6 +6,7 @@ import { LocationProvider } from "../contexts/LocationContext";
 import NavigationComponent from "../components/Navigation";
 import { ToastProvider } from '../contexts/ToastContext';
 import HtmlLangSync from "../components/HtmlLangSync";
+import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -21,6 +22,16 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Controle de Despesas Familiar",
   description: "Aplicação para controle de despesas familiares com projeções financeiras",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DespFamiliar",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
 };
 
 export default function RootLayout({
@@ -31,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${sora.variable} ${jetbrainsMono.variable} antialiased`}>
+        <ServiceWorkerRegistration />
         <LocationProvider>
           <HtmlLangSync />
           <AuthProvider>
