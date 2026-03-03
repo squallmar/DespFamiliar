@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { generateInsights, isAIConfigured } from '@/lib/ai';
+import { getDatabase } from '@/lib/database';
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,41 +9,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data } = await req.json();
+    // Check if OpenAI is configured
+    if (!isAIConfigured()) {
+      return NextResponse.json(
+        {
+          error: 'AI service not configured',
+          message: 'Please set OPENAI_API_KEY environment variable',
+        },
+        { status: 503 }
+      );
+    }
 
-    // TODO: Call OpenAI/Claude API with spending data
-    // const insights = await generateInsightsWithLLM(data);
+    const { periodDays, categories, focus } = (await req.json()) as {
+      periodDays?: number;
+      categories?: string[];
+      focus?: 'savings' | 'balance' | 'growth';
+    };
 
-    const mockInsights = [
+    // Generate AI-powered insights
+    const insights = await generateInsights(
+      userId,
+      periodDays || 30,
+      categories,
+      focus
+    );
+
+    return NextResponse.json(
       {
-        id: '1',
-        type: 'opportunity',
-        title: 'Reduzir gastos em alimentação',
-        description: 'Você gastou 35% mais em alimentação este mês comparado à média',
-        impact: 125.5,
-        confidence: 0.87,
-        category: 'Alimentação',
-        action: 'Revisar hábitos de alimentação fora',
-        createdAt: new Date().toISOString(),
+        requestId: `req_${Date.now()}`,
+        status: 'completed',
+        generatedAt: new Date().toISOString(),
+        insights,
+        totalOpportunities: insights.filter((i) => i.type === 'opportunity')
+          .length,
+        estimatedSavings: insights.reduce((sum, i) => sum + i.impact, 0),
       },
-      {
-        id: '2',
-        type: 'recommendation',
-        title: 'Aproveitar desconto no lanche',
-        description: 'Há desconto de 20% em cafés entre 2-4 da tarde',
-        impact: 35.0,
-        confidence: 0.92,
-        action: 'Visualizar oferta',
-        createdAt: new Date().toISOString(),
-      },
-    ];
-
-    // TODO: Save insights to database
-    return NextResponse.json(mockInsights);
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error generating insights:', error);
     return NextResponse.json(
-      { error: 'Failed to generate insights' },
+      {
+        error: 'Failed to generate insights',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }
@@ -54,18 +65,43 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // TODO: Query insights from database
-    const insights = [
-      {
-        id: '1',
-        type: 'opportunity',
-        title: 'Oportunidade de economia',
-        description: 'Identificada categoria com gastos acima da média',
-        confidence: 0.85,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-      },
-    ];
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const type = searchParams.get('type');
+
+    const db = await getDatabase();
+
+    let query = `
+      SELECT id, user_id, insight_type, category, title, description, 
+             impact_amount, confidence, action, created_at, expires_at
+      FROM insights
+      WHERE user_id = $1 AND expires_at > NOW()`;
+
+    const params: any[] = [userId];
+
+    if (type) {
+      query += ' AND insight_type = $2';
+      params.push(type);
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT $' + (params.length + 1);
+    params.push(limit);
+
+    const result = await db.query(query, params);
+
+    const insights = result.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      type: row.insight_type,
+      category: row.category,
+      title: row.title,
+      description: row.description,
+      impact: row.impact_amount,
+      confidence: row.confidence,
+      action: row.action,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+    }));
 
     return NextResponse.json(insights);
   } catch (error) {
