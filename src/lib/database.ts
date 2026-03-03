@@ -149,8 +149,147 @@ export async function getDatabase() {
         current_amount REAL DEFAULT 0,
         deadline TIMESTAMP NOT NULL,
         user_id TEXT NOT NULL,
+        category TEXT,
+        priority TEXT DEFAULT 'medium',
         completed BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Shared expenses table for expense splitting
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS shared_expenses (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        expense_id TEXT NOT NULL,
+        description TEXT NOT NULL,
+        total_amount REAL NOT NULL,
+        split_type TEXT DEFAULT 'equal',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (expense_id) REFERENCES expenses (id)
+      )
+    `);
+
+    // Shared expense participants
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS shared_expense_participants (
+        id TEXT PRIMARY KEY,
+        shared_expense_id TEXT NOT NULL,
+        member_id TEXT NOT NULL,
+        member_name TEXT NOT NULL,
+        share_percentage REAL NOT NULL DEFAULT 50,
+        amount_owed REAL NOT NULL,
+        amount_paid REAL DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (shared_expense_id) REFERENCES shared_expenses (id),
+        FOREIGN KEY (member_id) REFERENCES family_members (id)
+      )
+    `);
+
+    // Settlements/debts between family members
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS settlements (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        from_member_id TEXT NOT NULL,
+        to_member_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        paid_amount REAL DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        linked_expense_id TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        settled_at TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (from_member_id) REFERENCES family_members (id),
+        FOREIGN KEY (to_member_id) REFERENCES family_members (id)
+      )
+    `);
+
+    // Push notification subscriptions
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        endpoint TEXT NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id, endpoint),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Email report subscriptions
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_subscriptions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        frequency TEXT NOT NULL,
+        report_format TEXT DEFAULT 'summary',
+        categories TEXT,
+        active BOOLEAN DEFAULT TRUE,
+        subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Receipts/attachments
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS receipts (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        expense_id TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        file_size INTEGER,
+        file_type TEXT,
+        file_url TEXT NOT NULL,
+        ocr_text TEXT,
+        ocr_confidence REAL,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (expense_id) REFERENCES expenses (id)
+      )
+    `);
+
+    // AI-generated insights
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS insights (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        insight_type TEXT NOT NULL,
+        category TEXT,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        impact_amount REAL,
+        confidence REAL,
+        action TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Spending anomalies
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS anomalies (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        anomaly_type TEXT NOT NULL,
+        category TEXT,
+        description TEXT NOT NULL,
+        amount REAL,
+        normal_min REAL,
+        normal_max REAL,
+        normal_avg REAL,
+        severity TEXT DEFAULT 'medium',
+        explanation TEXT,
+        suggestion TEXT,
+        detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     `);
@@ -279,6 +418,22 @@ export async function getDatabase() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_pix_payments_user ON pix_payments (user_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_pix_payments_status ON pix_payments (status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_pix_payments_asaas ON pix_payments (asaas_subscription_id)');
+    
+    // New feature tables indexes
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_shared_expenses_user ON shared_expenses (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_shared_expense_participants_shared_expense ON shared_expense_participants (shared_expense_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_settlements_user ON settlements (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_settlements_from_member ON settlements (from_member_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_settlements_to_member ON settlements (to_member_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_settlements_status ON settlements (status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_email_subscriptions_user ON email_subscriptions (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_receipts_user ON receipts (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_receipts_expense ON receipts (expense_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_insights_user ON insights (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_insights_type ON insights (insight_type)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_anomalies_user ON anomalies (user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_anomalies_type ON anomalies (anomaly_type)');
 
     // =========================
     // ADMIN DEV
