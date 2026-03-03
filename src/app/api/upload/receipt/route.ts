@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
+import { uploadReceipt } from '@/lib/storage';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
@@ -45,17 +46,14 @@ export async function POST(req: NextRequest) {
     const db = await getDatabase();
     const receiptId = uuidv4();
 
-    // TODO: Upload file to cloud storage (AWS S3, Google Cloud Storage, etc.)
-    // const uploadedPath = await uploadToCloudStorage(file);
-    // TODO: Trigger OCR for text extraction if image
-
-    const fileUrl = `/uploads/receipts/${receiptId}_${file.name}`;
+    // Upload file to S3 or local storage (with automatic fallback)
+    const { key, url, storage } = await uploadReceipt(file, expenseId, userId);
 
     // Save receipt metadata to database
     await db.query(
-      `INSERT INTO receipts (id, user_id, expense_id, file_name, file_size, file_type, file_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [receiptId, userId, expenseId, file.name, file.size, file.type, fileUrl]
+      `INSERT INTO receipts (id, user_id, expense_id, file_name, file_size, file_type, file_url, storage_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [receiptId, userId, expenseId, file.name, file.size, file.type, url, storage]
     );
 
     const receipt = {
@@ -66,7 +64,9 @@ export async function POST(req: NextRequest) {
       fileSize: file.size,
       fileType: file.type,
       uploadedAt: new Date().toISOString(),
-      fileUrl,
+      fileUrl: url,
+      storageType: storage,
+      fileKey: key,
     };
 
     return NextResponse.json(receipt, { status: 201 });

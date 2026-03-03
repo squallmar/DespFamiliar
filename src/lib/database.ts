@@ -248,6 +248,7 @@ export async function getDatabase() {
         file_size INTEGER,
         file_type TEXT,
         file_url TEXT NOT NULL,
+        storage_type TEXT DEFAULT 'local',
         ocr_text TEXT,
         ocr_confidence REAL,
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
