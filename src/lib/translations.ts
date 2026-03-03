@@ -627,7 +627,7 @@ const translations = {
     aiInsightsAnomaly: 'Anomalia',
     aiInsightsRecommendation: 'Recomendação',
     aiInsightsTotal: 'Total',
-    aiInsights Opportunities: 'Oportunidades',
+    aiInsightsOpportunities: 'Oportunidades',
     aiInsightsWarnings: 'Avisos',
     aiInsightsAnomalies: 'Anomalias',
     aiInsightsNoSuggestions: 'Nenhuma sugestão disponível no momento.',
