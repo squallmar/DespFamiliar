@@ -9,7 +9,7 @@ export async function getDatabase() {
     pool = new Pool({
       connectionString:
         process.env.DATABASE_URL ||
-        'postgres://postgres:mM202038@@localhost:5432/despfamiliar',
+        'postgres://postgres:mM202038%40@localhost:5432/despfamiliar',
     });
 
     // =========================

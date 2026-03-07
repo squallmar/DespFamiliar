@@ -35,9 +35,20 @@ self.addEventListener('activate', (event) => {
 // Fetch event - Network first, fallback to cache
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const requestUrl = new URL(request.url);
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // Skip unsupported schemes (e.g. chrome-extension://)
+  if (!['http:', 'https:'].includes(requestUrl.protocol)) {
+    return;
+  }
+
+  // Skip cross-origin requests
+  if (requestUrl.origin !== self.location.origin) {
     return;
   }
 
@@ -55,13 +66,14 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // Clone the response
-        const clonedResponse = response.clone();
-
-        // Store successful responses in cache
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, clonedResponse);
-        });
+        if (response && response.ok && response.type === 'basic') {
+          const clonedResponse = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, clonedResponse).catch(() => {
+              // Ignore cache write errors for non-cacheable requests
+            });
+          });
+        }
 
         return response;
       })
@@ -77,8 +89,8 @@ self.addEventListener('fetch', (event) => {
 // Handle push notifications
 self.addEventListener('push', (event) => {
   const options = {
-    badge: '/icon-192.png',
-    icon: '/icon-192.png',
+    badge: '/next.svg',
+    icon: '/next.svg',
     vibrate: [100, 50, 100],
     tag: 'desp-notification',
     requireInteraction: false,

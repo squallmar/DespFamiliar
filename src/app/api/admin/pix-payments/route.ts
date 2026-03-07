@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/apiError';
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,10 +44,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ payments: result.rows });
 
   } catch (error) {
-    console.error('Erro ao buscar pagamentos:', error);
-    return NextResponse.json(
-      { error: 'Erro ao buscar pagamentos' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Erro ao buscar pagamentos:');
   }
 }

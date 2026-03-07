@@ -67,6 +67,21 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Erro no login:', error);
+
+    const dbError = error as { code?: string; message?: string };
+    if (
+      dbError?.code === '28P01' ||
+      dbError?.code === 'ECONNREFUSED' ||
+      dbError?.code === 'ENOTFOUND' ||
+      dbError?.code === '3D000' ||
+      dbError?.code === '08001'
+    ) {
+      return NextResponse.json(
+        { error: 'Banco de dados indisponível ou mal configurado. Verifique o DATABASE_URL.' },
+        { status: 503 }
+      );
+    }
+
     if (error instanceof Error && error.message.includes('JWT_SECRET')) {
       return NextResponse.json(
         { error: 'Servidor não configurado: JWT_SECRET ausente ou inválido no ambiente.' },

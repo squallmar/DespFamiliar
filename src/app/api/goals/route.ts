@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
 
+function handleGoalsApiError(error: unknown, context: string) {
+  if (error instanceof Error && error.message === 'Unauthorized') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  console.error(context, error);
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = requireAuth(req);
@@ -32,8 +41,7 @@ export async function GET(req: NextRequest) {
       throw dbError;
     }
   } catch (error) {
-    console.error('Error fetching goals:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleGoalsApiError(error, 'Error fetching goals:');
   }
 }
 
@@ -66,8 +74,7 @@ export async function POST(req: NextRequest) {
       throw dbError;
     }
   } catch (error) {
-    console.error('Error creating goal:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleGoalsApiError(error, 'Error creating goal:');
   }
 }
 
@@ -122,8 +129,7 @@ export async function PUT(req: NextRequest) {
       throw dbError;
     }
   } catch (error) {
-    console.error('Error updating goal:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleGoalsApiError(error, 'Error updating goal:');
   }
 }
 
@@ -152,7 +158,6 @@ export async function DELETE(req: NextRequest) {
       throw dbError;
     }
   } catch (error) {
-    console.error('Error deleting goal:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleGoalsApiError(error, 'Error deleting goal:');
   }
 }

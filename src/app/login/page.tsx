@@ -37,7 +37,16 @@ export default function LoginPage() {
       await login(formData.email, formData.password);
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('genericError'));
+      const rawMessage = err instanceof Error ? err.message : t('genericError');
+      const isDatabaseUnavailable =
+        rawMessage.includes('DATABASE_URL') ||
+        rawMessage.includes('Banco de dados indisponível');
+
+      if (isDatabaseUnavailable) {
+        setError(t('databaseUnavailableError'));
+      } else {
+        setError(rawMessage);
+      }
     } finally {
       setLoading(false);
     }

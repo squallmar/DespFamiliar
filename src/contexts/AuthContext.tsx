@@ -62,6 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
     const data = await response.json();
     if (!response.ok) {
+      // Return API error message; component will handle 503 case
       throw new Error(data.error || 'Erro no login');
     }
     setUser(data.user);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/apiError';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,10 +36,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('Erro ao aprovar pagamento:', error);
-    return NextResponse.json(
-      { error: 'Erro ao aprovar pagamento' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Erro ao aprovar pagamento:');
   }
 }

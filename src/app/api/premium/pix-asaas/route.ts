@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/apiError';
 import { checkRateLimit, getClientIpFromRequest } from '@/lib/rate-limit';
 
 // Configuração Asaas
@@ -187,10 +188,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Erro ao gerar Pix Asaas:', error);
-    return NextResponse.json(
-      { error: 'Falha ao gerar Pix' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Erro ao gerar Pix Asaas:');
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/apiError';
 
 function getStripeClient() {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -68,10 +69,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
 
   } catch (error) {
-    console.error('Erro ao criar checkout Stripe:', error);
-    return NextResponse.json(
-      { error: 'Falha ao criar checkout' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Erro ao criar checkout Stripe:');
   }
 }

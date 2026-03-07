@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/apiError';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,8 +27,8 @@ export async function GET(request: NextRequest) {
       ORDER BY u.created_at DESC`);
     console.log('Usuários retornados:', result.rows.length);
     return NextResponse.json({ users: result.rows });
-  } catch {
-    return NextResponse.json({ error: 'Erro ao listar usuários' }, { status: 500 });
+  } catch (error) {
+    return handleApiError(error, 'Erro ao listar usuários:');
   }
 }
 
@@ -56,8 +57,7 @@ export async function PATCH(request: NextRequest) {
     
     return NextResponse.json({ message: 'Status atualizado com sucesso' });
   } catch (error) {
-    console.error('Erro ao atualizar status:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar status' }, { status: 500 });
+    return handleApiError(error, 'Erro ao atualizar status:');
   }
 }
 
@@ -96,7 +96,6 @@ export async function DELETE(request: NextRequest) {
     
     return NextResponse.json({ message: 'Usuário excluído com sucesso' });
   } catch (error) {
-    console.error('Erro ao excluir usuário:', error);
-    return NextResponse.json({ error: 'Erro ao excluir usuário' }, { status: 500 });
+    return handleApiError(error, 'Erro ao excluir usuário:');
   }
 }
