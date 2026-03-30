@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       await db.query(
         `INSERT INTO pix_payments (user_id, asaas_subscription_id, asaas_customer_id, amount, status, next_due_date)
          VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (asaas_subscription_id) DO NOTHING`,
+         ON CONFLICT DO NOTHING`,
         [dbUser.id, subscriptionData.id, customerId, 20.00, 'PENDING', nextDueDate]
       );
     } catch (dbError) {

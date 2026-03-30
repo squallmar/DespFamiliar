@@ -400,6 +400,32 @@ export async function getDatabase() {
       )
     `);
 
+    // Keep legacy databases compatible with the current pix_payments schema.
+    await pool.query(`
+      ALTER TABLE pix_payments
+      ADD COLUMN IF NOT EXISTS asaas_subscription_id TEXT,
+      ADD COLUMN IF NOT EXISTS next_due_date TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP
+    `);
+
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'pix_payments'
+            AND column_name = 'asaas_payment_id'
+        ) THEN
+          UPDATE pix_payments
+          SET asaas_subscription_id = asaas_payment_id
+          WHERE asaas_subscription_id IS NULL;
+        END IF;
+      END
+      $$;
+    `);
+
     // =========================
     // ÍNDICES
     // =========================
