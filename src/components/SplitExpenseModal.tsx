@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Share2, Lock, Award, Router3, Loader } from 'lucide-react';
+import { Share2, Lock, Award, Loader } from 'lucide-react';
 
 export interface SharedExpense {
   id: string;
@@ -58,7 +58,7 @@ export default function SplitExpenseModal({
     );
   };
 
-  const calculateSplits = () => {
+  const calculateSplits = (): Record<string, number> => {
     const totalAmount = parseFloat(amount) || 0;
     if (splitType === 'equal') {
       const perPerson = totalAmount / (selectedMembers.length + 1); // +1 for person who paid

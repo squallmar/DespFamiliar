@@ -162,7 +162,7 @@ export default function FinancialProjections() {
 
   const { language, currency } = useLocation();
   const langKey = resolveLanguage(language);
-  const t = translations[langKey] || translations['pt-BR'];
+  const t = (translations[langKey] || translations['pt-BR']) as any;
   const categoriesMap = useMemo(() => (t?.categories ?? {}) as Record<string, string>, [t]);
   const formatCurrency = (value: number) => new Intl.NumberFormat(language, { style: 'currency', currency }).format(value);
 

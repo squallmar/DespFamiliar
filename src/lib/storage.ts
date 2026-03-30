@@ -110,9 +110,9 @@ export async function uploadReceipt(
 ): Promise<{
   key: string;
   url: string;
-  bucket: string;
+  storage: 's3' | 'local';
 }> {
-  return uploadFile(file, 'receipts', {
+  return uploadFileWithFallback(file, 'receipts', {
     expenseId,
     userId,
     uploadedAt: new Date().toISOString(),

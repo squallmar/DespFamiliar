@@ -11,9 +11,16 @@ interface ParseResult {
   warnings?: string[];
 }
 
-function parseCSV(content: string): any[] {
+interface ImportedTransaction {
+  date: string;
+  description: string;
+  amount: number;
+  category: string;
+}
+
+function parseCSV(content: string): ImportedTransaction[] {
   const lines = content.split('\n');
-  const transactions = [];
+  const transactions: ImportedTransaction[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
@@ -29,9 +36,9 @@ function parseCSV(content: string): any[] {
   return transactions;
 }
 
-function parseOFX(content: string): any[] {
+function parseOFX(content: string): ImportedTransaction[] {
   // Basic OFX parsing - extract STMTRS elements
-  const transactions = [];
+  const transactions: ImportedTransaction[] = [];
   const stmtRsRegex = /<STMTRS>[\s\S]*?<\/STMTRS>/g;
   const matches = content.match(stmtRsRegex) || [];
 
@@ -54,10 +61,10 @@ function parseOFX(content: string): any[] {
   return transactions;
 }
 
-function parseQIF(content: string): any[] {
-  const transactions = [];
+function parseQIF(content: string): ImportedTransaction[] {
+  const transactions: ImportedTransaction[] = [];
   const lines = content.split('\n');
-  let currentTransaction: any = {};
+  let currentTransaction: Partial<ImportedTransaction> = {};
 
   lines.forEach((line) => {
     const code = line[0];
@@ -77,8 +84,17 @@ function parseQIF(content: string): any[] {
         currentTransaction.category = value || 'Sem categoria';
         break;
       case '^':
-        if (currentTransaction.date && currentTransaction.amount) {
-          transactions.push(currentTransaction);
+        if (
+          currentTransaction.date &&
+          currentTransaction.description &&
+          typeof currentTransaction.amount === 'number'
+        ) {
+          transactions.push({
+            date: currentTransaction.date,
+            description: currentTransaction.description,
+            amount: currentTransaction.amount,
+            category: currentTransaction.category || 'Sem categoria',
+          });
         }
         currentTransaction = {};
         break;
@@ -107,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     const content = await file.text();
-    let transactions: any[] = [];
+    let transactions: ImportedTransaction[] = [];
 
     switch (format) {
       case 'csv':

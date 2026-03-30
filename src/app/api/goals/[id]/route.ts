@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 
+type GoalRouteContext = {
+  params: Promise<{ id: string }>;
+};
+
 // PUT - Update goal
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: GoalRouteContext
 ) {
   try {
     const userId = req.headers.get('x-user-id');
@@ -12,7 +16,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const goalId = params.id;
+    const { id: goalId } = await context.params;
     const { name, targetAmount, currentAmount, deadline, category, priority } =
       (await req.json()) as {
         name: string;
@@ -92,7 +96,7 @@ export async function PUT(
 // DELETE - Delete goal
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: GoalRouteContext
 ) {
   try {
     const userId = req.headers.get('x-user-id');
@@ -100,7 +104,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const goalId = params.id;
+    const { id: goalId } = await context.params;
     const db = await getDatabase();
 
     // Check if goal belongs to user
