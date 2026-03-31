@@ -20,10 +20,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password } = await request.json();
+    let email: unknown;
+    let password: unknown;
+    try {
+      ({ email, password } = await request.json());
+    } catch {
+      return NextResponse.json({ error: 'Payload de login invalido' }, { status: 400 });
+    }
+
+    const passwordValue = typeof password === 'string' ? password : '';
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-    if (!normalizedEmail || !password) {
+    if (!normalizedEmail || !passwordValue) {
       return NextResponse.json({ error: 'Email e senha são obrigatórios' }, { status: 400 });
     }
 
@@ -40,8 +48,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email ou senha inválidos' }, { status: 401 });
     }
 
+    if (typeof user.password !== 'string' || user.password.length === 0) {
+      return NextResponse.json({ error: 'Email ou senha inválidos' }, { status: 401 });
+    }
+
     // Verificar senha
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(passwordValue, user.password);
     if (!isValidPassword) {
       return NextResponse.json({ error: 'Email ou senha inválidos' }, { status: 401 });
     }

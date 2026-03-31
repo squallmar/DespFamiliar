@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 import type { User as UserType } from '@/types';
 
@@ -31,6 +32,13 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+
+  const isPublicAuthRoute =
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/reset' ||
+    pathname === '/reset/confirm';
 
   const checkAuth = async () => {
     try {
@@ -96,8 +104,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
+    if (isPublicAuthRoute) {
+      setLoading(false);
+      return;
+    }
     checkAuth();
-  }, []);
+  }, [isPublicAuthRoute]);
 
   const value = {
     user,

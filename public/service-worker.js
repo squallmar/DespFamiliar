@@ -56,7 +56,16 @@ self.addEventListener('fetch', (event) => {
   if (request.url.includes('/api/')) {
     event.respondWith(
       fetch(request).catch(() => {
-        return caches.match(request);
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          return new Response(
+            JSON.stringify({ error: 'Offline' }),
+            {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        });
       })
     );
     return;
@@ -80,7 +89,14 @@ self.addEventListener('fetch', (event) => {
       .catch(() => {
         // Return cached response or offline page
         return caches.match(request).then((cachedResponse) => {
-          return cachedResponse || caches.match('/');
+          if (cachedResponse) return cachedResponse;
+          return caches.match('/').then((fallbackResponse) => {
+            if (fallbackResponse) return fallbackResponse;
+            return new Response('Offline', {
+              status: 503,
+              headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+            });
+          });
         });
       })
   );
